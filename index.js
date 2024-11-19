@@ -484,6 +484,12 @@ function handleLocation(msg) {
     longitude
   });
 
+  // Si es un grupo y no está registrado, registrarlo automáticamente
+  if (msg.chat.type !== 'private' && !groupChats[chatId]) {
+    groupChats[chatId] = msg.chat.title || `Grupo ${chatId}`;
+    logger.info(`Grupo registrado automáticamente: ${groupChats[chatId]}`);
+  }
+
   // Actualizar ubicaciones
   if (!userLocations[chatId]) {
     userLocations[chatId] = {};
