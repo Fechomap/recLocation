@@ -65,53 +65,54 @@ const locationLastUpdate = {}; // { chatId: { userId: timestamp } }
 let locationMonitorInterval = null;
 
 
+
 // Inicialización del bot
 let bot;
 if (process.env.NODE_ENV === 'production') {
-  const port = process.env.PORT || 8443;
+  const port = process.env.PORT || 3000; // Heroku asigna el puerto
   const url = process.env.APP_URL.replace(/\/$/, ''); // Elimina la barra final si existe
   
-  // Configuración de Express y Bot
   const app = express();
-  
-  // Middleware para procesar JSON
   app.use(express.json());
-  
-  // Configuración del bot
+
+  // Configuración del bot con webhook
   bot = new TelegramBot(token, {
     webHook: {
-      port: port
+      port: port // Heroku gestionará este puerto
     }
   });
 
-  // Ruta para el webhook
+  // Rutas del servidor Express
   app.post(`/bot${token}`, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
   });
 
-  // Ruta de health check
   app.get('/', (req, res) => {
     res.status(200).send('Bot is running');
   });
 
-  const webhookUrl = `${url}/bot${token}`; // URL sin doble barra
+  const webhookUrl = `${url}/bot${token}`;
   logger.info(`Setting webhook to ${webhookUrl}`);
 
-  // Configurar el webhook
-  bot.setWebHook(webhookUrl).then(() => {
+  // Limpia y configura el webhook
+  bot.deleteWebHook().then(() => {
+    return bot.setWebHook(webhookUrl);
+  }).then(() => {
     logger.info(`Webhook set on ${webhookUrl}`);
   }).catch(error => {
     logger.error('Error setting webhook:', error);
   });
 
-  // Iniciar servidor Express
+  // Inicia el servidor Express
   app.listen(port, '0.0.0.0', () => {
     logger.info(`Express server is listening on port ${port}`);
   });
 } else {
   bot = new TelegramBot(token, { polling: true });
+  logger.info('Bot en modo polling');
 }
+
 
 
 
