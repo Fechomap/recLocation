@@ -472,6 +472,64 @@ function handleChangeOP(msg, match) {
   bot.sendMessage(chatId, `✅ Nombre asignado al usuario ${userId}: ${newName}`);
 }
 
+// Comando para cambios múltiples de operadores
+bot.onText(/\/changeOPs (.+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const fromId = msg.from.id;
+
+  logger.info(`Intento de cambio múltiple de nombres de operadores por usuario ${fromId}`);
+
+  if (!isAdmin(fromId)) {
+    logger.warn(`Usuario no autorizado ${fromId} intentó usar /changeOPs`);
+    bot.sendMessage(chatId, '❌ No tienes permiso para usar este comando.');
+    return;
+  }
+
+  try {
+    const entries = match[1].split(',').map(entry => entry.trim());
+    let successCount = 0;
+    let failCount = 0;
+    let responseMessage = '📝 *Resultado del registro múltiple:*\n\n';
+
+    entries.forEach(entry => {
+      const [userId, ...nameParts] = entry.split(':').map(part => part.trim());
+      const newName = nameParts.join(':').trim(); // Une todas las partes del nombre en caso de que contenga ':'
+
+      if (!userId || !newName) {
+        failCount++;
+        responseMessage += `❌ Entrada inválida: ${entry}\n`;
+        return;
+      }
+
+      if (isNaN(userId)) {
+        failCount++;
+        responseMessage += `❌ ID inválido: ${userId}\n`;
+        return;
+      }
+
+      userNames[userId] = newName;
+      successCount++;
+      responseMessage += `✅ ID ${userId} registrado como: ${newName}\n`;
+    });
+
+    responseMessage += `\n📊 *Resumen:*\n`;
+    responseMessage += `✅ Registros exitosos: ${successCount}\n`;
+    if (failCount > 0) {
+      responseMessage += `❌ Registros fallidos: ${failCount}\n`;
+    }
+
+    logger.info(`Cambio múltiple completado`, {
+      successCount,
+      failCount
+    });
+
+    bot.sendMessage(chatId, responseMessage, { parse_mode: 'Markdown' });
+  } catch (error) {
+    logger.error('Error en cambio múltiple de operadores:', error);
+    bot.sendMessage(chatId, '❌ Error en el procesamiento. Verifica el formato: /changeOPs id1:nombre1, id2:nombre2');
+  }
+});
+
 function handleLocation(msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
@@ -523,6 +581,7 @@ function handleHelp(msg) {
 /getdestination - *Mostrar las coordenadas de destino actuales*  
 /changeOP - *Asignar un nombre personalizado a un usuario* (solo administradores)
 /help - *Mostrar esta ayuda*
+/changeOPs - *Registrar múltiples operadores (formato: id1:nombre1, id2:nombre2)*
 
 *Cómo usar:*
 1. Envía /loc y comparte tu ubicación.
@@ -669,6 +728,64 @@ bot.onText(/\/timing/, handleTiming);
 
 // Comando changeOP
 bot.onText(/\/changeOP (.+)/, handleChangeOP);
+
+// Comando changeOPs (multiple)
+bot.onText(/\/changeOPs (.+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const fromId = msg.from.id;
+
+  logger.info(`Intento de cambio múltiple de nombres de operadores por usuario ${fromId}`);
+
+  if (!isAdmin(fromId)) {
+    logger.warn(`Usuario no autorizado ${fromId} intentó usar /changeOPs`);
+    bot.sendMessage(chatId, '❌ No tienes permiso para usar este comando.');
+    return;
+  }
+
+  try {
+    const entries = match[1].split(',').map(entry => entry.trim());
+    let successCount = 0;
+    let failCount = 0;
+    let responseMessage = '📝 *Resultado del registro múltiple:*\n\n';
+
+    entries.forEach(entry => {
+      const [userId, ...nameParts] = entry.split(':').map(part => part.trim());
+      const newName = nameParts.join(':').trim(); // Une todas las partes del nombre en caso de que contenga ':'
+
+      if (!userId || !newName) {
+        failCount++;
+        responseMessage += `❌ Entrada inválida: ${entry}\n`;
+        return;
+      }
+
+      if (isNaN(userId)) {
+        failCount++;
+        responseMessage += `❌ ID inválido: ${userId}\n`;
+        return;
+      }
+
+      userNames[userId] = newName;
+      successCount++;
+      responseMessage += `✅ ID ${userId} registrado como: ${newName}\n`;
+    });
+
+    responseMessage += `\n📊 *Resumen:*\n`;
+    responseMessage += `✅ Registros exitosos: ${successCount}\n`;
+    if (failCount > 0) {
+      responseMessage += `❌ Registros fallidos: ${failCount}\n`;
+    }
+
+    logger.info(`Cambio múltiple completado`, {
+      successCount,
+      failCount
+    });
+
+    bot.sendMessage(chatId, responseMessage, { parse_mode: 'Markdown' });
+  } catch (error) {
+    logger.error('Error en cambio múltiple de operadores:', error);
+    bot.sendMessage(chatId, '❌ Error en el procesamiento. Verifica el formato: /changeOPs id1:nombre1, id2:nombre2');
+  }
+});
 
 // Comando help
 bot.onText(/\/help/, handleHelp);
