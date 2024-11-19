@@ -277,7 +277,7 @@ function formatGeoReport(reportData) {
       
       // Agregar tiempo desde última actualización si es mayor a 5 minutos
       if (user.timeSinceUpdate >= 5) {
-        userReport += `   - ultima act: ${user.timeSinceUpdate}\n`;
+        userReport += `   - ultima act: ${user.timeSinceUpdate} min\n`;
       }
 
       reportMessage += userReport + '\n';
