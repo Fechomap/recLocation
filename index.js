@@ -66,28 +66,28 @@ let locationMonitorInterval = null;
 
 
 
-// Inicialización del bot
-let bot;
 if (process.env.NODE_ENV === 'production') {
-  const port = process.env.PORT || 3000; // Heroku asigna el puerto
-  const url = process.env.APP_URL.replace(/\/$/, ''); // Elimina la barra final si existe
-  
+  const port = process.env.PORT || 8443; // Heroku asigna automáticamente el puerto
+  const url = process.env.APP_URL.replace(/\/$/, ''); // URL sin barra final
+
   const app = express();
+
+  // Configuración de middleware
   app.use(express.json());
 
-  // Configuración del bot con webhook
   bot = new TelegramBot(token, {
     webHook: {
-      port: port // Heroku gestionará este puerto
+      port: port // Usamos el puerto dinámico asignado por Heroku
     }
   });
 
-  // Rutas del servidor Express
+  // Ruta para recibir actualizaciones de Telegram
   app.post(`/bot${token}`, (req, res) => {
-    bot.processUpdate(req.body);
+    bot.processUpdate(req.body); // Procesar actualización de Telegram
     res.sendStatus(200);
   });
 
+  // Health check
   app.get('/', (req, res) => {
     res.status(200).send('Bot is running');
   });
@@ -95,17 +95,18 @@ if (process.env.NODE_ENV === 'production') {
   const webhookUrl = `${url}/bot${token}`;
   logger.info(`Setting webhook to ${webhookUrl}`);
 
-  // Limpia y configura el webhook
-  bot.deleteWebHook().then(() => {
-    return bot.setWebHook(webhookUrl);
-  }).then(() => {
-    logger.info(`Webhook set on ${webhookUrl}`);
-  }).catch(error => {
-    logger.error('Error setting webhook:', error);
-  });
+  // Configurar el webhook
+  bot.deleteWebHook()
+    .then(() => bot.setWebHook(webhookUrl))
+    .then(() => {
+      logger.info(`Webhook set on ${webhookUrl}`);
+    })
+    .catch(error => {
+      logger.error('Error setting webhook:', error);
+    });
 
-  // Inicia el servidor Express
-  app.listen(port, '0.0.0.0', () => {
+  // Inicia Express en el puerto dinámico
+  app.listen(port, () => {
     logger.info(`Express server is listening on port ${port}`);
   });
 } else {
