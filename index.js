@@ -66,39 +66,42 @@ let locationMonitorInterval = null;
 // Inicialización del bot
 let bot;
 if (process.env.NODE_ENV === 'production') {
-  const url = process.env.APP_URL;
   const port = process.env.PORT || 8443;
+  const url = process.env.APP_URL;
   
-  // Configuración de Express
-  const express = require('express');
+  // Configuración de Express y Bot
   const app = express();
-  
-  app.get('/', (req, res) => {
-    res.status(200).send('Bot is running');
-  });
   
   // Configuración del bot
   bot = new TelegramBot(token, {
     webHook: {
-      port: port,
-      host: '0.0.0.0'
+      port: port
     }
   });
 
-  // Configurar el webhook
-  bot.setWebHook(`${url}/bot${token}`).then(() => {
-    logger.info(`Webhook configurado en ${url}/bot${token}`);
-  }).catch(error => {
-    logger.error('Error configurando webhook:', error);
+  // Ruta para el webhook
+  app.post(`/bot${token}`, (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
   });
+
+  // Ruta de health check
+  app.get('/', (req, res) => {
+    res.status(200).send('Bot is running');
+  });
+
+  // Configurar el webhook
+  bot.setWebHook(`${url}/bot${token}`);
 
   // Iniciar servidor Express
   app.listen(port, '0.0.0.0', () => {
-    logger.info(`Express server is listening on ${port}`);
+    logger.info(`Express server is listening on port ${port}`);
   });
 } else {
   bot = new TelegramBot(token, { polling: true });
 }
+
+
 
 // Estados y almacenamiento
 const groupChats = {};
