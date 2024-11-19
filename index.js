@@ -237,9 +237,9 @@ function formatTimingReport(reportData) {
     const safeUserName = escapeMarkdown(user.userName);
     const safeGroupName = escapeMarkdown(user.groupName);
 
-    reportMessage += `${index + 1}. 🕒 *${safeGroupName}* - ${safeUserName}:\n` +
-                     `   📏 Distancia: ${user.distanceKm} km\n` +
-                     `   ⏱️ Tiempo estimado: ${user.durationMin} minutos\n\n`;
+    reportMessage += `${index + 1}. 🚚 *${safeGroupName}* - ${safeUserName}:\n` +
+                     `   - Dist: *${user.distanceKm}* km\n` +
+                     `   - ETA: *${user.durationMin}* minutos\n\n`;
   });
 
   // Agregar usuarios con error al final
