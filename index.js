@@ -60,7 +60,6 @@ if (adminIds.length === 0) {
   logger.warn('La lista de IDs de administradores está vacía.');
 }
 
-const LOCATION_UPDATE_THRESHOLD = 5 * 60 * 1000; // 5 minutos en milisegundos
 const locationLastUpdate = {}; // { chatId: { userId: timestamp } }
 let locationMonitorInterval = null;
 
@@ -133,51 +132,7 @@ function initializeLocationMonitor() {
   logger.info('Monitor de ubicaciones iniciado');
 }
 
-async function checkLocationUpdates() {
-  const currentTime = Date.now();
-  logger.debug('Verificando actualizaciones de ubicación');
 
-  for (const [chatId, users] of Object.entries(locationLastUpdate)) {
-    for (const [userId, lastUpdate] of Object.entries(users)) {
-      const timeSinceUpdate = currentTime - lastUpdate;
-
-      if (timeSinceUpdate >= LOCATION_UPDATE_THRESHOLD) {
-        try {
-          // Verificar si el usuario aún está en el grupo y tiene ubicación activa
-          if (userLocations[chatId]?.[userId]) {
-            logger.warn(`Usuario ${userId} sin actualización de ubicación por más de 5 minutos en chat ${chatId}`);
-
-            const userName = userNames[userId] || `Usuario ${userId}`;
-            const safeUserName = escapeMarkdown(userName);
-
-            const message = `⚠️ *Alerta de Ubicación*\n\n` +
-                            `${safeUserName}, han pasado más de 5 minutos sin recibir actualizaciones de tu ubicación.\n\n` +
-                            `Si aún estás compartiendo tu ubicación, por favor ignora este mensaje.\n` +
-                            `Si has dejado de compartir tu ubicación, por favor actívala nuevamente para continuar recibiendo el servicio.`;
-
-            await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-
-            // Eliminar el registro de última actualización para evitar mensajes repetitivos
-            delete locationLastUpdate[chatId][userId];
-
-            logger.info(`Alerta de ubicación enviada para usuario ${userId} en chat ${chatId}`);
-          }
-        } catch (error) {
-          logger.error(`Error al enviar alerta de ubicación:`, {
-            error: error.message,
-            userId,
-            chatId
-          });
-        }
-      }
-    }
-
-    // Limpiar el objeto si no hay usuarios en el chat
-    if (Object.keys(locationLastUpdate[chatId]).length === 0) {
-      delete locationLastUpdate[chatId];
-    }
-  }
-}
 
 // ==========================================
 // FUNCIONES UTILITARIAS
@@ -214,13 +169,19 @@ async function calculateRoute(origin, destination) {
 function formatTimingReport(reportData) {
   // Crear un array plano con todos los usuarios y su información de grupo
   let allUsers = [];
+  const currentTime = Date.now();
 
   for (const [groupName, users] of Object.entries(reportData)) {
     users.forEach(user => {
       if (!user.error) {
+        // Calcular tiempo desde última actualización
+        const lastUpdate = locationLastUpdate[user.groupId]?.[user.userId] || 0;
+        const timeSinceUpdate = Math.floor((currentTime - lastUpdate) / (60 * 1000)); // Convertir a minutos
+
         allUsers.push({
           ...user,
-          groupName
+          groupName,
+          timeSinceUpdate
         });
       }
     });
@@ -237,9 +198,16 @@ function formatTimingReport(reportData) {
     const safeUserName = escapeMarkdown(user.userName);
     const safeGroupName = escapeMarkdown(user.groupName);
 
-    reportMessage += `${index + 1}. 🚚 *${safeGroupName}* - ${safeUserName}:\n` +
+    let userReport = `${index + 1}. 🚚 *${safeGroupName}* - ${safeUserName}:\n` +
                      `   - Dist: *${user.distanceKm}* km\n` +
-                     `   - ETA: *${user.durationMin}* minutos\n\n`;
+                     `   - ETA: *${user.durationMin}* minutos\n`;
+
+    // Agregar información de última actualización solo si han pasado más de 5 minutos
+    if (user.timeSinceUpdate >= 5) {
+      userReport += `   - ultima act: ${user.timeSinceUpdate}\n`;
+    }
+
+    reportMessage += userReport + '\n';
   });
 
   // Agregar usuarios con error al final
@@ -266,6 +234,7 @@ function formatTimingReport(reportData) {
 
   return reportMessage;
 }
+
 
 function escapeMarkdown(text) {
   // Escapa caracteres especiales de Markdown
@@ -374,7 +343,8 @@ async function handleTiming(msg) {
             userName,
             distanceKm,
             durationMin,
-            userId
+            userId,
+            groupId // Agregar el ID del grupo
           });
 
           logger.info(`Ruta calculada para usuario ${userName}`, {
@@ -389,7 +359,8 @@ async function handleTiming(msg) {
           reportData[groupName].push({
             userName: userNames[userId] || `Usuario ${userId}`,
             error: 'Error al calcular la ruta.',
-            userId
+            userId,
+            groupId // Agregar el ID del grupo
           });
         }
       }
@@ -419,6 +390,7 @@ async function handleTiming(msg) {
     bot.sendMessage(chatId, '❌ Error al generar el reporte. Por favor, inténtalo más tarde.');
   }
 }
+
 
 function handleChangeOP(msg, match) {
   const chatId = msg.chat.id;
@@ -583,5 +555,3 @@ bot.on('edited_message', (msg) => {
 // ==========================================
 logger.info('Bot iniciado correctamente');
 console.log('🤖 Bot en funcionamiento...');
-initializeLocationMonitor();
-logger.info('Monitor de ubicaciones iniciado correctamente');
