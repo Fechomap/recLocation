@@ -63,6 +63,7 @@ const LOCATION_UPDATE_THRESHOLD = 5 * 60 * 1000; // 5 minutos en milisegundos
 const locationLastUpdate = {}; // { chatId: { userId: timestamp } }
 let locationMonitorInterval = null;
 
+
 // Inicialización del bot
 let bot;
 if (process.env.NODE_ENV === 'production') {
@@ -71,11 +72,19 @@ if (process.env.NODE_ENV === 'production') {
   
   // Configuración de Express y Bot
   const app = express();
+
+  // Configurar middleware para procesar JSON
+  app.use(express.json());
   
-  // Configuración del bot
+  // Iniciar servidor Express primero
+  const server = app.listen(port, '0.0.0.0', () => {
+    logger.info(`Express server is listening on port ${port}`);
+  });
+  
+  // Configuración del bot sin puerto (usará el servidor Express)
   bot = new TelegramBot(token, {
     webHook: {
-      port: port
+      autoOpen: false
     }
   });
 
@@ -91,11 +100,10 @@ if (process.env.NODE_ENV === 'production') {
   });
 
   // Configurar el webhook
-  bot.setWebHook(`${url}/bot${token}`);
-
-  // Iniciar servidor Express
-  app.listen(port, '0.0.0.0', () => {
-    logger.info(`Express server is listening on port ${port}`);
+  bot.setWebHook(`${url}/bot${token}`).then(() => {
+    logger.info(`Webhook set on ${url}/bot${token}`);
+  }).catch(error => {
+    logger.error('Error setting webhook:', error);
   });
 } else {
   bot = new TelegramBot(token, { polling: true });
