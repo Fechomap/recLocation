@@ -69,23 +69,18 @@ let locationMonitorInterval = null;
 let bot;
 if (process.env.NODE_ENV === 'production') {
   const port = process.env.PORT || 8443;
-  const url = process.env.APP_URL;
+  const url = process.env.APP_URL.replace(/\/$/, ''); // Elimina la barra final si existe
   
   // Configuración de Express y Bot
   const app = express();
-
-  // Configurar middleware para procesar JSON
+  
+  // Middleware para procesar JSON
   app.use(express.json());
   
-  // Iniciar servidor Express primero
-  const server = app.listen(port, '0.0.0.0', () => {
-    logger.info(`Express server is listening on port ${port}`);
-  });
-  
-  // Configuración del bot sin puerto (usará el servidor Express)
+  // Configuración del bot
   bot = new TelegramBot(token, {
     webHook: {
-      autoOpen: false
+      port: port
     }
   });
 
@@ -100,11 +95,19 @@ if (process.env.NODE_ENV === 'production') {
     res.status(200).send('Bot is running');
   });
 
+  const webhookUrl = `${url}/bot${token}`; // URL sin doble barra
+  logger.info(`Setting webhook to ${webhookUrl}`);
+
   // Configurar el webhook
-  bot.setWebHook(`${url}/bot${token}`).then(() => {
-    logger.info(`Webhook set on ${url}/bot${token}`);
+  bot.setWebHook(webhookUrl).then(() => {
+    logger.info(`Webhook set on ${webhookUrl}`);
   }).catch(error => {
     logger.error('Error setting webhook:', error);
+  });
+
+  // Iniciar servidor Express
+  app.listen(port, '0.0.0.0', () => {
+    logger.info(`Express server is listening on port ${port}`);
   });
 } else {
   bot = new TelegramBot(token, { polling: true });
