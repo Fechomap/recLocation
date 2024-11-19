@@ -6,6 +6,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const winston = require('winston');
 const express = require('express');
+const bodyParser = require('body-parser');
 
 // ==========================================
 // CONFIGURACIÓN DE LOGGER
