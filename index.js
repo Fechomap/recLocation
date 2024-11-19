@@ -531,6 +531,7 @@ bot.onText(/\/getdestination/, (msg) => {
   }
 });
 
+
 // Comando loc
 bot.onText(/\/loc/, (msg) => {
   const chatId = msg.chat.id;
