@@ -230,7 +230,7 @@ function formatTimingReport(reportData) {
   allUsers.sort((a, b) => a.durationMin - b.durationMin);
 
   // Crear el mensaje del reporte
-  let reportMessage = `📊 *Reporte General de Timing*\n\n`;
+  let reportMessage = `📍 *Reporte General de Timing*\n\n`;
 
   // Agregar usuarios ordenados
   allUsers.forEach((user, index) => {
