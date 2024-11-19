@@ -5,6 +5,7 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const winston = require('winston');
+const express = require('express');
 
 // ==========================================
 // CONFIGURACIÓN DE LOGGER
@@ -65,14 +66,36 @@ let locationMonitorInterval = null;
 // Inicialización del bot
 let bot;
 if (process.env.NODE_ENV === 'production') {
+  const url = process.env.APP_URL;
+  const port = process.env.PORT || 8443;
+  
+  // Configuración de Express
+  const express = require('express');
+  const app = express();
+  
+  app.get('/', (req, res) => {
+    res.status(200).send('Bot is running');
+  });
+  
+  // Configuración del bot
   bot = new TelegramBot(token, {
     webHook: {
-      port: process.env.PORT
+      port: port,
+      host: '0.0.0.0'
     }
   });
-  // URL de Heroku
-  const url = process.env.APP_URL || 'https://tu-app.herokuapp.com';
-  bot.setWebHook(`${url}/bot${token}`);
+
+  // Configurar el webhook
+  bot.setWebHook(`${url}/bot${token}`).then(() => {
+    logger.info(`Webhook configurado en ${url}/bot${token}`);
+  }).catch(error => {
+    logger.error('Error configurando webhook:', error);
+  });
+
+  // Iniciar servidor Express
+  app.listen(port, '0.0.0.0', () => {
+    logger.info(`Express server is listening on ${port}`);
+  });
 } else {
   bot = new TelegramBot(token, { polling: true });
 }
