@@ -61,8 +61,6 @@ if (adminIds.length === 0) {
 }
 
 const locationLastUpdate = {}; // { chatId: { userId: timestamp } }
-let locationMonitorInterval = null;
-
 
 
 if (process.env.NODE_ENV === 'production') {
@@ -116,22 +114,6 @@ const userLocations = {}; // { chatId: { userId: { latitude, longitude } } }
 const userNames = {}; // { userId: userName }
 let destLatitude = parseFloat(process.env.DEST_LATITUDE) || null;
 let destLongitude = parseFloat(process.env.DEST_LONGITUDE) || null;
-
-// ==========================================
-// FUNCIONES DE MONITOREO DE UBICACIÓN
-// ==========================================
-function initializeLocationMonitor() {
-  logger.info('Inicializando monitor de ubicaciones');
-
-  // Limpiar intervalo existente si lo hay
-  if (locationMonitorInterval) {
-    clearInterval(locationMonitorInterval);
-  }
-
-  locationMonitorInterval = setInterval(checkLocationUpdates, 60000); // Revisar cada minuto
-  logger.info('Monitor de ubicaciones iniciado');
-}
-
 
 
 // ==========================================
@@ -204,7 +186,7 @@ function formatTimingReport(reportData) {
 
     // Agregar información de última actualización solo si han pasado más de 5 minutos
     if (user.timeSinceUpdate >= 5) {
-      userReport += `   - ultima act: ${user.timeSinceUpdate}\n`;
+      userReport += `   - ultima act: ${user.timeSinceUpdate} min\n`;
     }
 
     reportMessage += userReport + '\n';
@@ -239,6 +221,71 @@ function formatTimingReport(reportData) {
 function escapeMarkdown(text) {
   // Escapa caracteres especiales de Markdown
   return text.replace(/([*_`\[\]])/g, '\\$1');
+}
+
+// Función para obtener detalles de ubicación usando HERE Maps
+async function getLocationDetails(latitude, longitude) {
+  try {
+    const response = await axios.get('https://revgeocode.search.hereapi.com/v1/revgeocode', {
+      params: {
+        at: `${latitude},${longitude}`,
+        lang: 'es',
+        apiKey: hereApiKey
+      }
+    });
+
+    if (response.data.items && response.data.items.length > 0) {
+      const location = response.data.items[0];
+      const address = location.address;
+
+      // Extraer colonia y municipio
+      const district = address.district || address.subdistrict || 'N/A';  // Colonia
+      const city = address.city || address.county || 'N/A';  // Municipio
+
+      return {
+        colonia: district.toUpperCase(),
+        municipio: city.toUpperCase()
+      };
+    }
+    
+    return {
+      colonia: 'NO DISPONIBLE',
+      municipio: 'NO DISPONIBLE'
+    };
+  } catch (error) {
+    logger.error('Error obteniendo detalles de ubicación:', {
+      error: error.message,
+      coordinates: `${latitude},${longitude}`
+    });
+    throw error;
+  }
+}
+
+// Función para formatear el reporte de geolocalización
+function formatGeoReport(reportData) {
+  const currentTime = Date.now();
+  let reportMessage = `📍 *Reporte General de Geo*\n\n`;
+  let index = 1;
+
+  for (const [groupName, users] of Object.entries(reportData)) {
+    users.forEach(user => {
+      const safeUserName = escapeMarkdown(user.userName);
+      const safeGroupName = escapeMarkdown(groupName);
+      
+      let userReport = `${index}. 🚚 *${safeGroupName}* - ${safeUserName}:\n`;
+      userReport += `   - Lugar: col. ${user.location.colonia}, Mun ${user.location.municipio}\n`;
+      
+      // Agregar tiempo desde última actualización si es mayor a 5 minutos
+      if (user.timeSinceUpdate >= 5) {
+        userReport += `   - ultima act: ${user.timeSinceUpdate}\n`;
+      }
+
+      reportMessage += userReport + '\n';
+      index++;
+    });
+  }
+
+  return reportMessage;
 }
 
 // ==========================================
@@ -465,6 +512,7 @@ function handleHelp(msg) {
 
 /loc - *Registrar tu ubicación en tiempo real*  
 /timing - *Calcular distancia y tiempo hacia las coordenadas de destino actuales*  
+/geo - *Obtener ubicación actual (colonia y municipio) de todas las unidades*
 /setdestination - *Establecer nuevas coordenadas de destino* (solo administradores)
 /getdestination - *Mostrar las coordenadas de destino actuales*  
 /changeOP - *Asignar un nombre personalizado a un usuario* (solo administradores)
@@ -483,6 +531,85 @@ function handleHelp(msg) {
 
   bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
 }
+
+async function handleGeo(msg) {
+  const chatId = msg.chat.id;
+  const fromId = msg.from.id;
+
+  logger.info(`Comando geo solicitado por usuario ${fromId}`);
+
+  if (!isAdmin(fromId)) {
+    logger.warn(`Usuario no autorizado ${fromId} intentó usar /geo`);
+    bot.sendMessage(chatId, '❌ No tienes permiso para usar este comando.');
+    return;
+  }
+
+  try {
+    bot.sendMessage(chatId, '🔄 Obteniendo información de ubicación de las unidades...');
+
+    const reportData = {};
+    const currentTime = Date.now();
+
+    for (const [groupId, groupName] of Object.entries(groupChats)) {
+      const users = userLocations[groupId];
+      if (!users || Object.keys(users).length === 0) continue;
+
+      logger.info(`Procesando grupo ${groupName}`);
+      reportData[groupName] = [];
+
+      // Procesar cada usuario del grupo
+      for (const [userId, loc] of Object.entries(users)) {
+        try {
+          // Obtener detalles de ubicación
+          const locationDetails = await getLocationDetails(loc.latitude, loc.longitude);
+          
+          // Calcular tiempo desde última actualización
+          const lastUpdate = locationLastUpdate[groupId]?.[userId] || 0;
+          const timeSinceUpdate = Math.floor((currentTime - lastUpdate) / (60 * 1000)); // Convertir a minutos
+
+          reportData[groupName].push({
+            userName: userNames[userId] || `Usuario ${userId}`,
+            location: locationDetails,
+            timeSinceUpdate
+          });
+
+          logger.info(`Información de ubicación obtenida para usuario ${userId}`, {
+            location: locationDetails
+          });
+
+        } catch (error) {
+          logger.error(`Error procesando ubicación para usuario ${userId}`, {
+            error: error.message
+          });
+        }
+      }
+    }
+
+    if (Object.keys(reportData).length === 0) {
+      logger.warn('No hay datos para generar el reporte geo');
+      bot.sendMessage(chatId, '❌ No hay usuarios con ubicaciones registradas.');
+      return;
+    }
+
+    const reportMessage = formatGeoReport(reportData);
+
+    // Enviar al grupo de administradores
+    await bot.sendMessage(adminGroupId, reportMessage, {
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true
+    });
+
+    if (chatId.toString() !== adminGroupId.toString()) {
+      bot.sendMessage(chatId, '✅ El reporte de ubicaciones ha sido enviado al Grupo Administrador.');
+    }
+
+    logger.info('Reporte geo generado y enviado exitosamente');
+  } catch (error) {
+    logger.error('Error general en comando geo:', { error: error.message });
+    bot.sendMessage(chatId, '❌ Error al generar el reporte de ubicaciones. Por favor, inténtalo más tarde.');
+  }
+}
+
 
 // ==========================================
 // CONFIGURACIÓN DE COMANDOS
@@ -539,6 +666,9 @@ bot.onText(/\/changeOP (.+)/, handleChangeOP);
 
 // Comando help
 bot.onText(/\/help/, handleHelp);
+
+// Comando geo
+bot.onText(/\/geo/, handleGeo);
 
 // ==========================================
 // MANEJADORES DE EVENTOS
