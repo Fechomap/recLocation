@@ -746,7 +746,7 @@ bot.on('edited_message', (msg) => {
 });
 
 // ==========================================
-// INICIALIZACIÓN
+// INICIALIZACIÓN.
 // ==========================================
 logger.info('Bot iniciado correctamente');
 console.log('🤖 Bot en funcionamiento...');
