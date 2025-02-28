@@ -112,8 +112,6 @@ if (process.env.NODE_ENV === 'production') {
 const groupChats = {};
 const userLocations = {}; // { chatId: { userId: { latitude, longitude } } }
 const userNames = {}; // { userId: userName }
-let destLatitude = parseFloat(process.env.DEST_LATITUDE) || null;
-let destLongitude = parseFloat(process.env.DEST_LONGITUDE) || null;
 
 
 // ==========================================
@@ -291,65 +289,17 @@ function formatGeoReport(reportData) {
 // ==========================================
 // MANEJADORES DE COMANDOS
 // ==========================================
-function handleSetDestination(msg, match) {
-  const chatId = msg.chat.id;
-  const fromId = msg.from.id;
-
-  logger.info(`Intento de setear destino por usuario ${fromId}`);
-
-  if (!isAdmin(fromId)) {
-    logger.warn(`Usuario no autorizado ${fromId} intentó usar /setdestination`);
-    bot.sendMessage(chatId, '❌ No tienes permiso para usar este comando.');
-    return;
-  }
-
-  const text = match[1].replace(/\s+/g, ''); // Elimina todos los espacios
-  const coordPattern = /^-?\d+\.?\d*,-?\d+\.?\d*$/;
-
-  if (!coordPattern.test(text)) {
-    logger.warn(`Formato inválido de coordenadas: ${text}`);
-    bot.sendMessage(chatId, '❌ Formato de coordenadas no reconocido. Por favor, ingresa las coordenadas en el formato "latitud,longitud"');
-    return;
-  }
-
-  const [latStr, lonStr] = text.split(',');
-  const newDestLatitude = parseFloat(latStr);
-  const newDestLongitude = parseFloat(lonStr);
-
-  if (isNaN(newDestLatitude) || isNaN(newDestLongitude)) {
-    logger.error(`Error al parsear coordenadas: ${latStr}, ${lonStr}`);
-    bot.sendMessage(chatId, '❌ Las coordenadas ingresadas no son válidas.');
-    return;
-  }
-
-  // Validar rango de coordenadas
-  if (newDestLatitude < -90 || newDestLatitude > 90 || newDestLongitude < -180 || newDestLongitude > 180) {
-    logger.error(`Coordenadas fuera de rango: ${newDestLatitude}, ${newDestLongitude}`);
-    bot.sendMessage(chatId, '❌ Las coordenadas ingresadas están fuera de los rangos válidos.');
-    return;
-  }
-
-  destLatitude = newDestLatitude;
-  destLongitude = newDestLongitude;
-
-  const mapsUrl = `https://www.google.com/maps?q=${destLatitude},${destLongitude}`;
-  const message = `✅ *Coordenadas de destino actualizadas*\n\n` +
-                  `Coordenadas: \`${destLatitude},${destLongitude}\`\n` +
-                  `Ver en Google Maps: ${mapsUrl}`;
-
-  bot.sendMessage(chatId, message, {
-    parse_mode: 'Markdown',
-    disable_web_page_preview: false
-  });
-
-  logger.info(`Destino actualizado a: ${destLatitude}, ${destLongitude}`);
-}
-
 async function handleTiming(msg) {
   const chatId = msg.chat.id;
   const fromId = msg.from.id;
 
   logger.info(`Comando timing solicitado por usuario ${fromId}`);
+  
+  // Añadir logs de diagnóstico
+  console.log("==== DEBUG INFO ====");
+  console.log("groupChats:", groupChats);
+  console.log("userLocations:", userLocations);
+  console.log("===================");
 
   if (!isAdmin(fromId)) {
     logger.warn(`Usuario no autorizado ${fromId} intentó usar /timing`);
@@ -357,48 +307,136 @@ async function handleTiming(msg) {
     return;
   }
 
+  // En lugar de verificar coordenadas almacenadas, pedir las coordenadas
+  const askForCoordinates = async () => {
+    return new Promise((resolve) => {
+      // Envía el mensaje sin usar reply_markup
+      bot.sendMessage(
+        chatId,
+        '📍 Por favor, envía las coordenadas de destino en formato "latitud,longitud"'
+      );
+  
+      // Listener para capturar el siguiente mensaje del mismo usuario en el chat
+      const listener = (replyMsg) => {
+        // Asegurarse de que el mensaje sea del mismo chat y del mismo usuario que inició el comando
+        if (replyMsg.chat.id === chatId && replyMsg.from.id === fromId && replyMsg.text) {
+          const text = replyMsg.text.replace(/\s+/g, '');
+          const coordPattern = /^-?\d+\.?\d*,-?\d+\.?\d*$/;
+          if (!coordPattern.test(text)) {
+            bot.sendMessage(chatId, '❌ Formato de coordenadas no reconocido. Por favor, ingresa las coordenadas en el formato "latitud,longitud"');
+            // Remover listener y resolver como nulo para detener el proceso
+            bot.removeListener('message', listener);
+            resolve(null);
+            return;
+          }
+          const [latStr, lonStr] = text.split(',');
+          const destLatitude = parseFloat(latStr);
+          const destLongitude = parseFloat(lonStr);
+  
+          if (isNaN(destLatitude) || isNaN(destLongitude)) {
+            bot.sendMessage(chatId, '❌ Las coordenadas ingresadas no son válidas.');
+            bot.removeListener('message', listener);
+            resolve(null);
+            return;
+          }
+  
+          // Validar rango de coordenadas
+          if (destLatitude < -90 || destLatitude > 90 || destLongitude < -180 || destLongitude > 180) {
+            bot.sendMessage(chatId, '❌ Las coordenadas ingresadas están fuera de los rangos válidos.');
+            bot.removeListener('message', listener);
+            resolve(null);
+            return;
+          }
+  
+          // Una vez validado, removemos el listener y resolvemos la promesa
+          bot.removeListener('message', listener);
+          resolve({ destLatitude, destLongitude });
+        }
+      };
+  
+      bot.on('message', listener);
+  
+      // Tiempo límite de 5 minutos para esperar la respuesta
+      setTimeout(() => {
+        bot.removeListener('message', listener);
+        resolve(null);
+      }, 5 * 60 * 1000);
+    });
+  };
+
   try {
-    if (isNaN(destLatitude) || isNaN(destLongitude)) {
-      logger.error('Intento de timing sin coordenadas de destino configuradas');
-      bot.sendMessage(chatId, '❌ Las coordenadas de destino no están configuradas correctamente.');
+    bot.sendMessage(chatId, '🔄 Por favor, proporciona las coordenadas de destino...');
+    
+    const coordinates = await askForCoordinates();
+    
+    if (!coordinates) {
+      logger.warn('No se proporcionaron coordenadas válidas para el timing');
       return;
     }
-
-    bot.sendMessage(chatId, '🔄 Calculando tiempos y distancias, ordenados por tiempo de llegada...');
+    
+    const { destLatitude, destLongitude } = coordinates;
+    
+    // Mostrar las coordenadas que se van a usar
+    const mapsUrl = `https://www.google.com/maps?q=${destLatitude},${destLongitude}`;
+    await bot.sendMessage(chatId, 
+      `✅ *Utilizando coordenadas:*\n\n` +
+      `Coordenadas: \`${destLatitude},${destLongitude}\`\n` +
+      `Ver en Google Maps: ${mapsUrl}\n\n` +
+      `🔄 Calculando tiempos y distancias...`, 
+      {
+        parse_mode: 'Markdown',
+        disable_web_page_preview: false
+      }
+    );
 
     const reportData = {};
+    // Procesar ubicaciones de grupos
     for (const [groupId, groupName] of Object.entries(groupChats)) {
       const users = userLocations[groupId];
       if (!users || Object.keys(users).length === 0) continue;
-
+    
       logger.info(`Procesando grupo ${groupName}`);
-      reportData[groupName] = [];
-
+      
+      // Crear la entrada para este grupo
+      if (!reportData[groupName]) {
+        reportData[groupName] = [];
+      }
+    
       // Procesar cada usuario del grupo
       for (const [userId, loc] of Object.entries(users)) {
         try {
+          // Evitar procesar usuarios duplicados
+          const isAlreadyProcessed = Object.values(reportData).some(
+            usersArray => usersArray.some(user => user.userId === userId)
+          );
+          
+          if (isAlreadyProcessed) {
+            logger.info(`Usuario ${userId} ya procesado, omitiendo duplicado`);
+            continue;
+          }
+    
           const route = await calculateRoute(
             `${loc.latitude},${loc.longitude}`,
             `${destLatitude},${destLongitude}`
           );
-
+    
           const distanceKm = (route.length / 1000).toFixed(2);
           const durationMin = Math.round(route.duration / 60);
           const userName = userNames[userId] || `Usuario ${userId}`;
-
+    
           reportData[groupName].push({
             userName,
             distanceKm,
             durationMin,
             userId,
-            groupId // Agregar el ID del grupo
+            groupId
           });
-
+    
           logger.info(`Ruta calculada para usuario ${userName}`, {
             distance: distanceKm,
             duration: durationMin
           });
-
+    
         } catch (error) {
           logger.error(`Error calculando ruta para usuario ${userId}`, {
             error: error.message
@@ -407,7 +445,7 @@ async function handleTiming(msg) {
             userName: userNames[userId] || `Usuario ${userId}`,
             error: 'Error al calcular la ruta.',
             userId,
-            groupId // Agregar el ID del grupo
+            groupId
           });
         }
       }
@@ -426,10 +464,6 @@ async function handleTiming(msg) {
       parse_mode: 'Markdown',
       disable_web_page_preview: true
     });
-
-    if (chatId.toString() !== adminGroupId.toString()) {
-      bot.sendMessage(chatId, '✅ El reporte ordenado ha sido enviado al Grupo Administrador.');
-    }
 
     logger.info('Reporte de timing ordenado generado y enviado exitosamente');
   } catch (error) {
@@ -542,28 +576,48 @@ function handleLocation(msg) {
     longitude
   });
 
-  // Si es un grupo y no está registrado, registrarlo automáticamente
-  if (msg.chat.type !== 'private' && !groupChats[chatId]) {
-    groupChats[chatId] = msg.chat.title || `Grupo ${chatId}`;
-    logger.info(`Grupo registrado automáticamente: ${groupChats[chatId]}`);
+  // Si es un chat privado, registrar el chatId como el userId para mantener coherencia
+  if (msg.chat.type === 'private') {
+    const userName = userNames[userId] || `Usuario ${userId}`;
+    // Registrar como un "grupo" personal
+    groupChats[userId] = `Personal - ${userName}`;
+    
+    // Actualizar ubicaciones para el ID del usuario
+    if (!userLocations[userId]) {
+      userLocations[userId] = {};
+    }
+    userLocations[userId][userId] = { latitude, longitude };
+    
+    // Actualizar timestamp para el ID del usuario
+    if (!locationLastUpdate[userId]) {
+      locationLastUpdate[userId] = {};
+    }
+    locationLastUpdate[userId][userId] = Date.now();
+  } 
+  // Para grupos, usar la lógica existente
+  else {
+    if (!groupChats[chatId]) {
+      groupChats[chatId] = msg.chat.title || `Grupo ${chatId}`;
+      logger.info(`Grupo registrado automáticamente: ${groupChats[chatId]}`);
+    }
+    
+    // Actualizar ubicaciones para el grupo
+    if (!userLocations[chatId]) {
+      userLocations[chatId] = {};
+    }
+    userLocations[chatId][userId] = { latitude, longitude };
+    
+    // Actualizar timestamp para el grupo
+    if (!locationLastUpdate[chatId]) {
+      locationLastUpdate[chatId] = {};
+    }
+    locationLastUpdate[chatId][userId] = Date.now();
   }
-
-  // Actualizar ubicaciones
-  if (!userLocations[chatId]) {
-    userLocations[chatId] = {};
-  }
-  userLocations[chatId][userId] = { latitude, longitude };
-
-  // Actualizar timestamp de última actualización
-  if (!locationLastUpdate[chatId]) {
-    locationLastUpdate[chatId] = {};
-  }
-  locationLastUpdate[chatId][userId] = Date.now();
 
   logger.debug(`Actualización de ubicación registrada`, {
     userId,
     chatId,
-    timestamp: locationLastUpdate[chatId][userId]
+    timestamp: locationLastUpdate[msg.chat.type === 'private' ? userId : chatId][userId]
   });
 }
 
@@ -575,21 +629,17 @@ function handleHelp(msg) {
 📌 *Comandos Disponibles* 📌
 
 /loc - *Registrar tu ubicación en tiempo real*  
-/timing - *Calcular distancia y tiempo hacia las coordenadas de destino actuales*  
+/timing - *Calcular distancia y tiempo hacia coordenadas de destino* (se te pedirán las coordenadas)  
 /geo - *Obtener ubicación actual (colonia y municipio) de todas las unidades*
-/setdestination - *Establecer nuevas coordenadas de destino* (solo administradores)
-/getdestination - *Mostrar las coordenadas de destino actuales*  
 /changeOP - *Asignar un nombre personalizado a un usuario* (solo administradores)
 /help - *Mostrar esta ayuda*
 /changeOPs - *Registrar múltiples operadores (formato: id1:nombre1, id2:nombre2)*
 
 *Cómo usar:*
 1. Envía /loc y comparte tu ubicación.
-2. Los administradores pueden enviar /setdestination seguido de las nuevas coordenadas en el formato "latitud,longitud" para actualizar el destino.
-3. Los administradores pueden enviar /timing para generar el reporte de todos los usuarios.
-
-*Ejemplo de /setdestination:*
-/setdestination 19.356247,-98.984018
+2. Los administradores pueden enviar /timing para calcular las distancias de las unidades a un destino específico.
+   Cuando ejecutas /timing, el bot te pedirá que ingreses las coordenadas de destino.
+3. Ingresa las coordenadas en el formato "latitud,longitud" (ejemplo: 19.356247,-98.984018).
 
 *Nota:* Los nombres de usuarios personalizados pueden ser asignados por los administradores mediante el comando /changeOP <user_id> <new_name>.
   `;
@@ -679,31 +729,19 @@ async function handleGeo(msg) {
 // ==========================================
 // CONFIGURACIÓN DE COMANDOS
 // ==========================================
-
-// Comando setdestination
-bot.onText(/^\/setdestination\s+(.+)$/, handleSetDestination);
-
 // Comando getdestination
+// Reemplazar con:
 bot.onText(/\/getdestination/, (msg) => {
   const chatId = msg.chat.id;
-  logger.info(`Solicitud de destino actual por ${msg.from.id}`);
+  logger.info(`Solicitud de información sobre destino por ${msg.from.id}`);
+  
+  const message = `ℹ️ *Información sobre el destino*\n\n` +
+                  `En la nueva versión del bot, las coordenadas de destino se solicitan cada vez que ejecutas el comando /timing.\n\n` +
+                  `No se almacenan coordenadas fijas. Para calcular distancias y tiempos, simplemente usa el comando /timing y sigue las instrucciones.`;
 
-  if (destLatitude !== null && destLongitude !== null) {
-    const mapsUrl = `https://www.google.com/maps?q=${destLatitude},${destLongitude}`;
-    const message = `📍 *Ubicación de ORIGEN*\n\n` +
-                    `Coordenadas: \`${destLatitude}, ${destLongitude}\`\n` +
-                    `Ver en Google Maps: ${mapsUrl}`;
-
-    bot.sendMessage(chatId, message, {
-      parse_mode: 'Markdown',
-      disable_web_page_preview: false
-    });
-
-    logger.info('Enlace de destino enviado', { mapsUrl });
-  } else {
-    logger.warn('Se solicitó destino pero no hay coordenadas configuradas');
-    bot.sendMessage(chatId, '❌ Las coordenadas de destino no están configuradas.');
-  }
+  bot.sendMessage(chatId, message, {
+    parse_mode: 'Markdown'
+  });
 });
 
 
