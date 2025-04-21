@@ -11,6 +11,8 @@ Bot de Telegram diseñado para el seguimiento en tiempo real de ubicaciones, cá
 - Integración con HERE Maps para cálculo de rutas
 - Soporte para múltiples grupos y usuarios
 - Interfaz a través de comandos de Telegram
+- **Nueva**: Arquitectura modular para fácil mantenimiento y extensión
+- **Nueva**: Alternancia automática entre webhook (producción) y polling (desarrollo)
 
 ## 🛠️ Tecnologías Utilizadas
 - Node.js
@@ -66,8 +68,7 @@ NODE_ENV=production
 | Variable | Descripción | Valor por defecto |
 |----------|-------------|-------------------|
 | PORT | Puerto del servidor | 8443 |
-| DEST_LATITUDE | Latitud del destino | null |
-| DEST_LONGITUDE | Longitud del destino | null |
+| LOG_LEVEL | Nivel de detalle para logs | info |
 
 ## 📱 Comandos del Bot
 
@@ -76,35 +77,150 @@ NODE_ENV=production
 | /loc | Registrar ubicación en tiempo real | Todos |
 | /timing | Calcular distancias y tiempos | Admin |
 | /geo | Obtener ubicación actual de unidades | Admin |
-| /setdestination | Establecer coordenadas de destino | Admin |
-| /getdestination | Ver coordenadas de destino actuales | Todos |
 | /changeOP | Asignar nombre a un usuario | Admin |
 | /changeOPs | Registrar múltiples operadores | Admin |
+| /diagnostico | Mostrar estado del sistema | Admin |
 | /help | Mostrar ayuda | Todos |
+| /test | Verificar respuesta del bot | Todos |
 
-## 🚀 Deployment en Heroku
+## 🔄 Flujo de Desarrollo y Producción
 
-1. Crear nueva aplicación en Heroku:
-```bash
-heroku create tu-app-name
+### 📱 Desarrollo Local (Polling)
+
+1. **Preparar entorno de desarrollo**:
+   ```bash
+   # Asegurarse de que NODE_ENV=development
+   echo "NODE_ENV=development" > .env.dev
+   # Añadir el resto de variables de entorno a .env.dev
+   ```
+
+2. **Iniciar en modo desarrollo**:
+   ```bash
+   # Iniciar con configuración de desarrollo
+   npm run dev
+   # O con logging detallado
+   LOG_LEVEL=debug npm run dev
+   ```
+
+3. **Características del modo desarrollo**:
+   - El bot **elimina automáticamente** cualquier webhook existente
+   - Inicia en modo polling sin necesidad de configuración adicional
+   - No requiere URL pública ni configuración de puerto
+
+### 🚀 Producción en Heroku (Webhook)
+
+1. **Preparar para producción**:
+   ```bash
+   # Asegurarse de que los cambios están guardados
+   git add .
+   git commit -m "Mensaje descriptivo de los cambios"
+   ```
+
+2. **Desplegar a Heroku**:
+   ```bash
+   # Subir cambios a Heroku
+   git push heroku main
+   ```
+
+3. **Escalar dynos**:
+   ```bash
+   # Asegurarse de tener al menos un dyno activo
+   heroku ps:scale web=1
+   ```
+
+4. **Verificar estado**:
+   ```bash
+   # Ver logs para confirmar inicio correcto
+   heroku logs --tail
+   ```
+
+### 🔄 Alternar entre Entornos
+
+#### De Producción a Desarrollo:
+
+1. **Bajar los dynos en Heroku**:
+   ```bash
+   heroku ps:scale web=0
+   ```
+
+2. **Iniciar localmente**:
+   ```bash
+   npm run dev
+   ```
+   - El bot elimina automáticamente el webhook al iniciar
+
+#### De Desarrollo a Producción:
+
+1. **Detener el bot local**:
+   - Presionar `Ctrl+C` en la terminal
+
+2. **Subir los dynos en Heroku**:
+   ```bash
+   heroku ps:scale web=1
+   ```
+   - El webhook se configura automáticamente al iniciar
+
+## 🏗️ Estructura del Proyecto
+
+La aplicación sigue una arquitectura modular para facilitar el mantenimiento:
+
+```
+📁 src/
+├── 📁 bot/              # Configuración del bot
+├── 📁 commands/         # Comandos del bot
+├── 📁 handlers/         # Manejadores de eventos
+├── 📁 services/         # Servicios externos (HERE Maps)
+├── 📁 middlewares/      # Verificación de permisos
+├── 📁 utils/            # Utilidades
+├── 📁 config/           # Configuración de entorno
+└── 📁 storage/          # Gestión centralizada de almacenamiento
 ```
 
-2. Configurar variables de entorno:
-```bash
-heroku config:set TELEGRAM_BOT_TOKEN=xxx
-heroku config:set HERE_API_KEY=xxx
-heroku config:set ADMIN_GROUP_ID=xxx
-heroku config:set ADMIN_IDS=xxx
-heroku config:set NODE_ENV=production
-heroku config:set APP_URL=$(heroku info -s | grep web_url | cut -d= -f2)
-```
+## 🔍 Diagnóstico y Solución de Problemas
 
-3. Desplegar la aplicación:
-```bash
-git push heroku main
-```
+### Comando de Diagnóstico
+El bot incluye un comando `/diagnostico` que muestra información detallada sobre:
+- Grupos registrados
+- Ubicaciones almacenadas
+- Usuarios configurados
+- Última actividad
 
-## 📝 Comandos Útiles para Heroku
+Usa este comando cuando:
+- Los reportes no muestran todas las unidades
+- Los comandos `/geo` o `/timing` no funcionan correctamente
+- Sospechas que hay problemas con el registro de ubicaciones
+
+### Problemas Comunes
+
+#### El bot no responde en producción
+1. **Verificar estado de los dynos**:
+   ```bash
+   heroku ps
+   ```
+2. **Revisar logs**:
+   ```bash
+   heroku logs --tail
+   ```
+3. **Verificar webhook**:
+   ```bash
+   curl https://api.telegram.org/bot<TOKEN>/getWebhookInfo
+   ```
+
+#### El bot no responde en desarrollo
+1. **Verificar que no hay webhook configurado**:
+   ```bash
+   curl https://api.telegram.org/bot<TOKEN>/getWebhookInfo
+   ```
+2. **Eliminar webhook manualmente si existe**:
+   ```bash
+   curl -X POST https://api.telegram.org/bot<TOKEN>/deleteWebhook
+   ```
+3. **Verificar que no hay otro proceso usando polling**:
+   ```bash
+   ps aux | grep node
+   ```
+
+## 🚀 Comandos Útiles para Heroku
 
 ### Ver logs
 ```bash
@@ -121,42 +237,20 @@ heroku config
 heroku restart
 ```
 
-## 🔍 Monitoreo y Logs
-El sistema utiliza Winston para logging con los siguientes niveles:
-- ERROR: Errores críticos que requieren atención inmediata
-- WARN: Advertencias sobre posibles problemas
-- INFO: Información general sobre el funcionamiento
-- DEBUG: Información detallada para desarrollo
+### Escalar dynos (apagar/encender)
+```bash
+# Apagar (para desarrollo local)
+heroku ps:scale web=0
 
-## 🛠️ Solución de Problemas
-
-### El bot no responde
-1. Verificar que el bot está activo en Telegram
-2. Comprobar TELEGRAM_BOT_TOKEN
-3. Revisar logs de Heroku
-4. Verificar que el webhook está configurado correctamente
-
-### Errores en cálculo de rutas
-1. Verificar HERE_API_KEY
-2. Comprobar formato de coordenadas
-3. Verificar conectividad con API de HERE
-
-### Problemas con permisos de administrador
-1. Verificar ADMIN_IDS
-2. Comprobar ADMIN_GROUP_ID
-3. Asegurar que el bot es administrador en el grupo
+# Encender (para producción)
+heroku ps:scale web=1
+```
 
 ## 🔒 Seguridad
 - Rotar periódicamente los tokens
 - No compartir las variables de entorno
 - Mantener actualizada la lista de administradores
 - Verificar regularmente los accesos
-
-## 📄 Licencia
-[Especificar tipo de licencia]
-
-## 👥 Contribución
-[Especificar guías de contribución]
 
 ## 📞 Soporte
 [Especificar información de contacto para soporte]
