@@ -19,6 +19,12 @@ async function startBot() {
     logger.info('Iniciando Bot de Seguimiento de Ubicación');
     logger.info(`Entorno: ${config.IS_PRODUCTION ? 'Producción' : 'Desarrollo'}`);
     
+    // Para debugging en producción
+    if (config.IS_PRODUCTION) {
+      logger.info(`APP_URL configurada: ${config.APP_URL}`);
+      logger.info(`RAILWAY_STATIC_URL: ${process.env.RAILWAY_STATIC_URL}`);
+    }
+    
     // Inicializar bot según el entorno
     const bot = await initializeBot();
     
@@ -52,14 +58,28 @@ async function startBot() {
         res.status(200).send('Bot en funcionamiento');
       });
       
+      // Health check endpoint para Railway
+      app.get('/health', (req, res) => {
+        res.json({ status: 'ok', time: new Date().toISOString() });
+      });
+      
       // Iniciar servidor Express
       app.listen(config.PORT, '0.0.0.0', async () => {
         logger.info(`Servidor Express escuchando en puerto ${config.PORT}`);
         
         // Configurar el webhook después de que el servidor esté corriendo
         const webhookUrl = `${config.APP_URL}${webhookPath}`;
-        await bot.setWebHook(webhookUrl);
-        logger.info(`Webhook configurado en ${webhookUrl}`);
+        try {
+          await bot.setWebHook(webhookUrl);
+          logger.info(`Webhook configurado en ${webhookUrl}`);
+          
+          // Verificar que el webhook se configuró correctamente
+          const webhookInfo = await bot.getWebhookInfo();
+          logger.info(`Webhook info:`, JSON.stringify(webhookInfo, null, 2));
+        } catch (error) {
+          logger.error('Error al configurar webhook:', error);
+          throw error;
+        }
       });
     } else {
       logger.info('Bot ejecutándose en modo polling');

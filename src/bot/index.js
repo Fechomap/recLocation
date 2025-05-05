@@ -24,34 +24,36 @@ async function initializeBot() {
   } else {
     logger.info('Inicializando bot en modo desarrollo con polling');
     
-    // En desarrollo, primero verificar si hay un webhook y eliminarlo
-    const tempBot = new TelegramBot(token, { polling: false });
-    
+    // En desarrollo, eliminar cualquier webhook existente
     try {
-      // Verificar si existe un webhook
+      const tempBot = new TelegramBot(token, { polling: false });
       const webhookInfo = await tempBot.getWebhookInfo();
       
       if (webhookInfo && webhookInfo.url) {
-        logger.info(`Encontrado webhook existente: ${webhookInfo.url}, eliminando...`);
+        logger.info(`Eliminando webhook existente: ${webhookInfo.url}`);
         await tempBot.deleteWebhook();
         logger.info('Webhook eliminado correctamente');
+      } else {
+        logger.info('No hay webhook existente que eliminar');
       }
     } catch (error) {
       logger.warn('Error al verificar/eliminar webhook:', error.message);
     }
     
-    // Inicializar con polling - configuración explícita para capturar todos los tipos de mensajes
+    // Inicializar con polling
     bot = new TelegramBot(token, { 
-      polling: true,
-      // Asegurarnos de recibir todos los tipos de actualizaciones
-      allowedUpdates: ['message', 'edited_message', 'callback_query', 'inline_query']
+      polling: {
+        interval: 300,  // Intervalo de polling en ms
+        autoStart: true,
+        params: {
+          timeout: 10
+        }
+      }
     });
     
-    // Agregar listener genérico para depuración
-    bot.on('message', (msg) => {
-      if (msg.text) {
-        logger.debug(`Mensaje recibido: "${msg.text}" de usuario ${msg.from.id} en chat ${msg.chat.id}`);
-      }
+    // Confirmar que el polling está activo
+    bot.on('polling_error', (error) => {
+      logger.error('Error de polling:', error);
     });
     
     logger.info('Bot ejecutándose en modo polling');
