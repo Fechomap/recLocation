@@ -72,10 +72,6 @@ async function startBot() {
         try {
           await bot.setWebHook(webhookUrl);
           logger.info(`Webhook configurado en ${webhookUrl}`);
-          
-          // Verificar que el webhook se configuró correctamente
-          const webhookInfo = await bot.getWebhookInfo();
-          logger.info(`Webhook info:`, JSON.stringify(webhookInfo, null, 2));
         } catch (error) {
           logger.error('Error al configurar webhook:', error);
           throw error;

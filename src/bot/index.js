@@ -27,17 +27,11 @@ async function initializeBot() {
     // En desarrollo, eliminar cualquier webhook existente
     try {
       const tempBot = new TelegramBot(token, { polling: false });
-      const webhookInfo = await tempBot.getWebhookInfo();
-      
-      if (webhookInfo && webhookInfo.url) {
-        logger.info(`Eliminando webhook existente: ${webhookInfo.url}`);
-        await tempBot.deleteWebhook();
-        logger.info('Webhook eliminado correctamente');
-      } else {
-        logger.info('No hay webhook existente que eliminar');
-      }
+      // Intentar eliminar webhook sin verificar primero
+      await tempBot.deleteWebhook();
+      logger.info('Eliminado cualquier webhook existente (si lo había)');
     } catch (error) {
-      logger.warn('Error al verificar/eliminar webhook:', error.message);
+      logger.warn('Error al eliminar webhook:', error.message);
     }
     
     // Inicializar con polling
