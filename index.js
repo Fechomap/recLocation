@@ -8,6 +8,9 @@ const registerHandlers = require('./src/handlers');
 const config = require('./src/config');
 const logger = require('./src/config/logger');
 
+// Importar API (nuevo)
+const { startApiServer } = require('./src/api');
+
 /**
  * Inicia el bot y configura el servidor Express si es necesario
  */
@@ -40,6 +43,10 @@ async function startBot() {
       logger.info(`PRUEBA: Comando /test recibido de ${msg.from.id} en chat ${msg.chat.id}`);
       bot.sendMessage(msg.chat.id, '✅ La prueba de comando funcionó correctamente');
     });
+    
+    // NUEVO: Iniciar servidor API
+    const api = startApiServer(bot);
+    logger.info('API iniciada para integraciones externas');
     
     // Configurar servidor Express para webhook en producción
     if (config.IS_PRODUCTION) {
