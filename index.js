@@ -8,7 +8,7 @@ const registerHandlers = require('./src/handlers');
 const config = require('./src/config');
 const logger = require('./src/config/logger');
 
-// Importar API (nuevo)
+// Importar API
 const { startApiServer } = require('./src/api');
 
 /**
@@ -44,49 +44,52 @@ async function startBot() {
       bot.sendMessage(msg.chat.id, '✅ La prueba de comando funcionó correctamente');
     });
     
-    // NUEVO: Iniciar servidor API
-    const api = startApiServer(bot);
-    logger.info('API iniciada para integraciones externas');
+    // Configurar servidor Express
+    const app = express();
+    app.use(express.json());
     
-    // Configurar servidor Express para webhook en producción
+    // Ruta de health check básica (para monitoreo y diagnóstico)
+    app.get('/health', (req, res) => {
+      res.json({ status: 'ok', time: new Date().toISOString() });
+    });
+    
+    // IMPORTANTE: Montar el router de API correctamente en la aplicación
+    const apiRouter = startApiServer(bot);
+    app.use(apiRouter);  // Esto es lo que se corrigió - ahora el router se monta correctamente
+    
+    // En producción, configurar webhook para Telegram
     if (config.IS_PRODUCTION) {
-      const app = express();
-      app.use(express.json());
-      
-      // Ruta para webhook
+      // Ruta para webhook de Telegram
       const webhookPath = `/bot${config.TELEGRAM_BOT_TOKEN}`;
       app.post(webhookPath, (req, res) => {
         bot.processUpdate(req.body);
         res.sendStatus(200);
       });
       
-      // Ruta de verificación de estado
+      // Ruta raíz para verificación de estado
       app.get('/', (req, res) => {
         res.status(200).send('Bot en funcionamiento');
       });
+    }
+    
+    // Iniciar servidor Express
+    const PORT = config.PORT || 3000;
+    app.listen(PORT, '0.0.0.0', async () => {
+      logger.info(`Servidor Express escuchando en puerto ${PORT}`);
       
-      // Health check endpoint para Railway
-      app.get('/health', (req, res) => {
-        res.json({ status: 'ok', time: new Date().toISOString() });
-      });
-      
-      // Iniciar servidor Express
-      app.listen(config.PORT, '0.0.0.0', async () => {
-        logger.info(`Servidor Express escuchando en puerto ${config.PORT}`);
-        
-        // Configurar el webhook después de que el servidor esté corriendo
-        const webhookUrl = `${config.APP_URL}${webhookPath}`;
+      // En producción, configurar el webhook para Telegram
+      if (config.IS_PRODUCTION) {
+        const webhookUrl = `${config.APP_URL}/bot${config.TELEGRAM_BOT_TOKEN}`;
         try {
           await bot.setWebHook(webhookUrl);
           logger.info(`Webhook configurado en ${webhookUrl}`);
         } catch (error) {
           logger.error('Error al configurar webhook:', error);
-          throw error;
         }
-      });
-    } else {
-      logger.info('Bot ejecutándose en modo polling');
-    }
+      } else {
+        logger.info('Bot ejecutándose en modo polling');
+      }
+    });
     
     logger.info('Bot iniciado exitosamente');
     console.log('🤖 Bot en funcionamiento...');

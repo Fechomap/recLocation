@@ -6,13 +6,12 @@ const storage = require('../storage');
 const logger = require('../config/logger');
 
 /**
- * Inicia el servidor API para integraciones externas
+ * Crea un router Express para la API
  * @param {Object} bot - Instancia del bot Telegram
- * @returns {Object} Instancia del servidor Express
+ * @returns {Object} Router Express
  */
 function startApiServer(bot) {
-  const app = express();
-  app.use(express.json());
+  const router = express.Router();
   
   // Middleware de autenticación API simple
   const authenticateApiRequest = (req, res, next) => {
@@ -25,12 +24,12 @@ function startApiServer(bot) {
   };
 
   // Endpoint de health-check (sin autenticación para verificar que el servicio está activo)
-  app.get('/health', (req, res) => {
+  router.get('/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
   // Endpoint principal para calcular timing
-  app.post('/api/timing', authenticateApiRequest, async (req, res) => {
+  router.post('/api/timing', authenticateApiRequest, async (req, res) => {
     try {
       const { coordinates, chatId } = req.body;
       
@@ -151,13 +150,7 @@ function startApiServer(bot) {
     }
   });
 
-  // Iniciar servidor en puerto específico
-  const apiPort = process.env.API_PORT || 3001;
-  const server = app.listen(apiPort, '0.0.0.0', () => {
-    logger.info(`Servidor API iniciado en puerto ${apiPort}`);
-  });
-  
-  return { app, server };
+  return router;
 }
 
 module.exports = { startApiServer };
