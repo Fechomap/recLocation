@@ -20,14 +20,14 @@ Bot de Telegram diseñado para el seguimiento en tiempo real de ubicaciones, cá
 - API de Telegram Bot
 - HERE Maps API
 - Winston (para logging)
-- Heroku (para deployment)
+- Railway (para deployment)
 
 ## ⚙️ Requisitos Previos
-- Node.js (versión recomendada: 14.x o superior)
+- Node.js (versión recomendada: 18.x o superior)
 - NPM (incluido con Node.js)
 - Cuenta en Telegram
 - Cuenta en HERE Developer Portal
-- Cuenta en Heroku
+- Cuenta en Railway
 
 ## 📦 Instalación
 
@@ -48,7 +48,6 @@ TELEGRAM_BOT_TOKEN=tu_token_aqui
 HERE_API_KEY=tu_api_key_aqui
 ADMIN_GROUP_ID=-100xxxxxxxxxx
 ADMIN_IDS=id1,id2,id3,id4
-APP_URL=https://tu-app.herokuapp.com/
 NODE_ENV=production
 ```
 
@@ -61,13 +60,15 @@ NODE_ENV=production
 | HERE_API_KEY | API Key de HERE Maps | abc123def456ghi789 |
 | ADMIN_GROUP_ID | ID del grupo de administradores | -1001234567890 |
 | ADMIN_IDS | IDs de usuarios administradores | 123456789,987654321 |
-| APP_URL | URL de la aplicación en Heroku | https://myapp.herokuapp.com |
 | NODE_ENV | Entorno de ejecución | production |
 
 ### Variables Opcionales
 | Variable | Descripción | Valor por defecto |
 |----------|-------------|-------------------|
-| PORT | Puerto del servidor | 8443 |
+| PORT | Puerto del servidor (Railway lo configura automáticamente) | 8443 |
+| RAILWAY_PORT | Puerto asignado por Railway (automaático) | - |
+| RAILWAY_STATIC_URL | URL asignada por Railway (automático) | - |
+| APP_URL | URL personalizada (opcional) | - |
 | LOG_LEVEL | Nivel de detalle para logs | info |
 
 ## 📱 Comandos del Bot
@@ -107,41 +108,38 @@ NODE_ENV=production
    - Inicia en modo polling sin necesidad de configuración adicional
    - No requiere URL pública ni configuración de puerto
 
-### 🚀 Producción en Heroku (Webhook)
+### 🚀 Producción en Railway (Webhook)
 
-1. **Preparar para producción**:
+1. **Conectar repositorio a Railway**:
+   - Conecta tu repository de GitHub a Railway
+   - Railway detectará automáticamente la configuración de Node.js
+   - Configura las variables de entorno en Railway Dashboard
+
+2. **Configurar variables de entorno en Railway**:
+   - Ve a tu proyecto en Railway
+   - Ve a la pestaña "Variables"
+   - Añade todas las variables requeridas
+
+3. **Desplegar a Railway**:
    ```bash
-   # Asegurarse de que los cambios están guardados
+   # Subir cambios a GitHub (Railway lo detectará automáticamente)
    git add .
    git commit -m "Mensaje descriptivo de los cambios"
+   git push origin main
    ```
 
-2. **Desplegar a Heroku**:
-   ```bash
-   # Subir cambios a Heroku
-   git push heroku main
-   ```
-
-3. **Escalar dynos**:
-   ```bash
-   # Asegurarse de tener al menos un dyno activo
-   heroku ps:scale web=1
-   ```
-
-4. **Verificar estado**:
-   ```bash
-   # Ver logs para confirmar inicio correcto
-   heroku logs --tail
-   ```
+4. **Verificar deployment**:
+   - Railway asignará automáticamente una URL pública
+   - El webhook se configurará automáticamente usando la URL de Railway
+   - Revisa los logs en Railway Dashboard para confirmar el inicio correcto
 
 ### 🔄 Alternar entre Entornos
 
 #### De Producción a Desarrollo:
 
-1. **Bajar los dynos en Heroku**:
-   ```bash
-   heroku ps:scale web=0
-   ```
+1. **Pausar el deployment en Railway**:
+   - En Railway Dashboard, puedes pausar el deployment
+   - O simplemente iniciar localmente (el webhook será eliminado automáticamente)
 
 2. **Iniciar localmente**:
    ```bash
@@ -154,10 +152,8 @@ NODE_ENV=production
 1. **Detener el bot local**:
    - Presionar `Ctrl+C` en la terminal
 
-2. **Subir los dynos en Heroku**:
-   ```bash
-   heroku ps:scale web=1
-   ```
+2. **Asegurarse de que Railway esté activo**:
+   - Railway reanudará automáticamente el deployment
    - El webhook se configura automáticamente al iniciar
 
 ## 🏗️ Estructura del Proyecto
@@ -193,14 +189,12 @@ Usa este comando cuando:
 ### Problemas Comunes
 
 #### El bot no responde en producción
-1. **Verificar estado de los dynos**:
-   ```bash
-   heroku ps
-   ```
+1. **Verificar estado del deployment**:
+   - Revisa el estado en Railway Dashboard
+   - Ve a la pestaña "Deployments"
 2. **Revisar logs**:
-   ```bash
-   heroku logs --tail
-   ```
+   - Abre los logs en Railway Dashboard
+   - Busca errores o advertencias
 3. **Verificar webhook**:
    ```bash
    curl https://api.telegram.org/bot<TOKEN>/getWebhookInfo
@@ -220,31 +214,35 @@ Usa este comando cuando:
    ps aux | grep node
    ```
 
-## 🚀 Comandos Útiles para Heroku
+## 🚀 Comandos Útiles para Railway
 
-### Ver logs
+### Usando Railway CLI (opcional)
 ```bash
-heroku logs --tail
+# Instalar Railway CLI
+npm i -g @railway/cli
+
+# Login a Railway
+railway login
+
+# Ver logs en tiempo real
+railway logs
+
+# Ver variables configuradas
+railway vars
+
+# Restart el servicio
+railway up
+
+# Abrir dashboard en el navegador
+railway open
 ```
 
-### Ver variables configuradas
-```bash
-heroku config
-```
-
-### Reiniciar la aplicación
-```bash
-heroku restart
-```
-
-### Escalar dynos (apagar/encender)
-```bash
-# Apagar (para desarrollo local)
-heroku ps:scale web=0
-
-# Encender (para producción)
-heroku ps:scale web=1
-```
+### Sin Railway CLI (usando Railway Dashboard)
+- Accede a [Railway Dashboard](https://railway.app)
+- Selecciona tu proyecto
+- Usa la pestaña "Deployments" para ver el estado
+- Usa la pestaña "Logs" para monitoreo en tiempo real
+- Usa la pestaña "Variables" para configurar el entorno
 
 ## 🔒 Seguridad
 - Rotar periódicamente los tokens
@@ -254,3 +252,12 @@ heroku ps:scale web=1
 
 ## 📞 Soporte
 [Especificar información de contacto para soporte]
+
+## 🆕 Novedades con Railway
+
+Railway ofrece varias ventajas sobre Heroku:
+- No necesita `Procfile` - detecta automáticamente Node.js
+- Asigna automáticamente `RAILWAY_PORT` y `RAILWAY_STATIC_URL`
+- Mejor integración con GitHub para deployments automáticos
+- Logs en tiempo real más fáciles de acceder
+- Variables de entorno más fáciles de gestionar
