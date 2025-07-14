@@ -12,6 +12,9 @@ const authMiddleware = {
    * @returns {boolean} True si el usuario es administrador
    */
   isAdmin(userId) {
+    if (userId === null || userId === undefined) {
+      return false;
+    }
     const isAdminUser = config.ADMIN_IDS.includes(userId.toString());
     logger.debug(
       `Verificación de admin para usuario ${userId}: ${isAdminUser}`
