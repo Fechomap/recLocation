@@ -15,7 +15,7 @@ function registerCommands(bot) {
   logger.info('Registrando comandos del bot');
 
   // Comando loc con manejo de errores
-  bot.onText(/\/loc/, (msg) => {
+  bot.onText(/\/loc/, msg => {
     try {
       logger.debug(`Comando /loc recibido de usuario ${msg.from.id}`);
       locationCmd(bot)(msg);
@@ -23,9 +23,9 @@ function registerCommands(bot) {
       logger.error(`Error al procesar comando /loc: ${error.message}`);
     }
   });
-  
+
   // Comando help con manejo de errores
-  bot.onText(/\/help/, (msg) => {
+  bot.onText(/\/help/, msg => {
     try {
       logger.debug(`Comando /help recibido de usuario ${msg.from.id}`);
       helpCmd(bot)(msg);
@@ -33,7 +33,7 @@ function registerCommands(bot) {
       logger.error(`Error al procesar comando /help: ${error.message}`);
     }
   });
-  
+
   // Comandos administrativos con manejo de errores
   bot.onText(/\/changeOP (.+)/, (msg, match) => {
     try {
@@ -43,7 +43,7 @@ function registerCommands(bot) {
       logger.error(`Error al procesar comando /changeOP: ${error.message}`);
     }
   });
-  
+
   bot.onText(/\/changeOPs (.+)/, (msg, match) => {
     try {
       logger.debug(`Comando /changeOPs recibido de usuario ${msg.from.id}`);
@@ -52,15 +52,16 @@ function registerCommands(bot) {
       logger.error(`Error al procesar comando /changeOPs: ${error.message}`);
     }
   });
-  
+
   // Comando getdestination
-  bot.onText(/\/getdestination/, (msg) => {
+  bot.onText(/\/getdestination/, msg => {
     const chatId = msg.chat.id;
     logger.info(`Solicitud de información sobre destino por ${msg.from.id}`);
-    
-    const message = `ℹ️ *Información sobre el destino*\n\n` +
-                    `En la nueva versión del bot, las coordenadas de destino se solicitan cada vez que ejecutas el comando /timing.\n\n` +
-                    `No se almacenan coordenadas fijas. Para calcular distancias y tiempos, simplemente usa el comando /timing y sigue las instrucciones.`;
+
+    const message =
+      'ℹ️ *Información sobre el destino*\n\n' +
+      'En la nueva versión del bot, las coordenadas de destino se solicitan cada vez que ejecutas el comando /timing.\n\n' +
+      'No se almacenan coordenadas fijas. Para calcular distancias y tiempos, simplemente usa el comando /timing y sigue las instrucciones.';
 
     bot.sendMessage(chatId, message, {
       parse_mode: 'Markdown'
@@ -68,7 +69,7 @@ function registerCommands(bot) {
   });
 
   // Registrar comando timing con manejo de errores
-  bot.onText(/\/timing/, (msg) => {
+  bot.onText(/\/timing/, msg => {
     try {
       logger.debug(`Comando /timing recibido de usuario ${msg.from.id}`);
       timingCmd(bot)(msg);
@@ -76,9 +77,9 @@ function registerCommands(bot) {
       logger.error(`Error al procesar comando /timing: ${error.message}`);
     }
   });
-  
+
   // Registrar comando geo con manejo de errores
-  bot.onText(/\/geo/, (msg) => {
+  bot.onText(/\/geo/, msg => {
     try {
       logger.debug(`Comando /geo recibido de usuario ${msg.from.id}`);
       geoCmd(bot)(msg);
@@ -88,7 +89,7 @@ function registerCommands(bot) {
   });
 
   // Registrar comando de diagnóstico
-  bot.onText(/\/diagnostico/, (msg) => {
+  bot.onText(/\/diagnostico/, msg => {
     try {
       logger.debug(`Comando /diagnostico recibido de usuario ${msg.from.id}`);
       diagnosticTool(bot)(msg);

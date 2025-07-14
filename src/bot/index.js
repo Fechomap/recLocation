@@ -14,16 +14,16 @@ async function initializeBot() {
 
   if (config.IS_PRODUCTION) {
     logger.info('Inicializando bot en modo producción con webhook');
-    
+
     // Crear bot sin iniciar webhook automáticamente
     bot = new TelegramBot(token, {
       webHook: { autoOpen: false }
     });
-    
+
     return bot; // El webhook se configurará después de iniciar Express
   } else {
     logger.info('Inicializando bot en modo desarrollo con polling');
-    
+
     // En desarrollo, eliminar cualquier webhook existente
     try {
       const tempBot = new TelegramBot(token, { polling: false });
@@ -33,25 +33,25 @@ async function initializeBot() {
     } catch (error) {
       logger.warn('Error al eliminar webhook:', error.message);
     }
-    
+
     // Inicializar con polling
-    bot = new TelegramBot(token, { 
+    bot = new TelegramBot(token, {
       polling: {
-        interval: 300,  // Intervalo de polling en ms
+        interval: 300, // Intervalo de polling en ms
         autoStart: true,
         params: {
           timeout: 10
         }
       }
     });
-    
+
     // Confirmar que el polling está activo
-    bot.on('polling_error', (error) => {
+    bot.on('polling_error', error => {
       logger.error('Error de polling:', error);
     });
-    
+
     logger.info('Bot ejecutándose en modo polling');
-    
+
     return bot;
   }
 }

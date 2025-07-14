@@ -1,6 +1,7 @@
 # Documentación de la API de RegLocation Bot
 
 ## Índice
+
 1. [Introducción](#introducción)
 2. [Autenticación](#autenticación)
 3. [Endpoints](#endpoints)
@@ -17,6 +18,7 @@ La API de RegLocation Bot permite interactuar programáticamente con el sistema 
 **URL Base:** `https://web-production-23d41.up.railway.app/`
 
 **Características principales:**
+
 - Solicitar reportes de timing (distancia y tiempo) hacia coordenadas específicas
 - Envío automático de resultados a grupos de Telegram configurados
 - Autenticación mediante tokens API
@@ -45,6 +47,7 @@ GET /health
 **Autenticación:** No requerida
 
 **Respuesta exitosa:**
+
 ```json
 {
   "status": "ok",
@@ -64,12 +67,13 @@ POST /api/timing
 
 **Parámetros de solicitud:**
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
+| Parámetro   | Tipo   | Descripción                                                                                |
+| ----------- | ------ | ------------------------------------------------------------------------------------------ |
 | coordinates | string | Coordenadas de destino en formato "latitud,longitud" (por ejemplo, "19.395665,-99.195553") |
-| chatId | string | ID del chat de Telegram donde se enviará el reporte (por ejemplo, "-1002420951714") |
+| chatId      | string | ID del chat de Telegram donde se enviará el reporte (por ejemplo, "-1002420951714")        |
 
 **Ejemplo de cuerpo de solicitud:**
+
 ```json
 {
   "coordinates": "19.395665,-99.195553",
@@ -78,6 +82,7 @@ POST /api/timing
 ```
 
 **Respuesta exitosa:**
+
 ```json
 {
   "success": true
@@ -85,6 +90,7 @@ POST /api/timing
 ```
 
 **Respuesta de error (sin ubicaciones registradas):**
+
 ```json
 {
   "success": false,
@@ -122,11 +128,14 @@ async function requestTimingReport() {
         chatId: '-1002420951714'
       }
     });
-    
+
     console.log('Respuesta:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error:', error.response ? error.response.data : error.message);
+    console.error(
+      'Error:',
+      error.response ? error.response.data : error.message
+    );
     throw error;
   }
 }
@@ -150,7 +159,7 @@ def request_timing_report():
         "coordinates": "19.395665,-99.195553",
         "chatId": "-1002420951714"
     }
-    
+
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         response.raise_for_status()  # Lanza excepción si hay error HTTP
@@ -167,12 +176,12 @@ request_timing_report()
 
 ## Códigos de respuesta
 
-| Código | Descripción |
-|--------|-------------|
-| 200 | Solicitud exitosa |
-| 400 | Solicitud inválida (parámetros faltantes o incorrectos) |
-| 401 | No autorizado (token de API inválido o faltante) |
-| 500 | Error interno del servidor |
+| Código | Descripción                                             |
+| ------ | ------------------------------------------------------- |
+| 200    | Solicitud exitosa                                       |
+| 400    | Solicitud inválida (parámetros faltantes o incorrectos) |
+| 401    | No autorizado (token de API inválido o faltante)        |
+| 500    | Error interno del servidor                              |
 
 ## Ejemplos de uso
 

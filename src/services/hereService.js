@@ -19,17 +19,17 @@ const hereService = {
       const response = await axios.get('https://router.hereapi.com/v8/routes', {
         params: {
           transportMode: 'car',
-          origin: origin,
-          destination: destination,
+          origin,
+          destination,
           return: 'summary',
           apiKey: config.HERE_API_KEY
         }
       });
-      
+
       if (!response.data.routes || response.data.routes.length === 0) {
         throw new Error('No se encontró ninguna ruta');
       }
-      
+
       return response.data.routes[0].sections[0].summary;
     } catch (error) {
       logger.error('Error calculando ruta:', {
@@ -49,28 +49,31 @@ const hereService = {
    */
   async getLocationDetails(latitude, longitude) {
     try {
-      const response = await axios.get('https://revgeocode.search.hereapi.com/v1/revgeocode', {
-        params: {
-          at: `${latitude},${longitude}`,
-          lang: 'es',
-          apiKey: config.HERE_API_KEY
+      const response = await axios.get(
+        'https://revgeocode.search.hereapi.com/v1/revgeocode',
+        {
+          params: {
+            at: `${latitude},${longitude}`,
+            lang: 'es',
+            apiKey: config.HERE_API_KEY
+          }
         }
-      });
+      );
 
       if (response.data.items && response.data.items.length > 0) {
         const location = response.data.items[0];
         const address = location.address;
 
         // Extraer colonia y municipio
-        const district = address.district || address.subdistrict || 'N/A';  // Colonia
-        const city = address.city || address.county || 'N/A';  // Municipio
+        const district = address.district || address.subdistrict || 'N/A'; // Colonia
+        const city = address.city || address.county || 'N/A'; // Municipio
 
         return {
           colonia: district.toUpperCase(),
           municipio: city.toUpperCase()
         };
       }
-      
+
       return {
         colonia: 'NO DISPONIBLE',
         municipio: 'NO DISPONIBLE'

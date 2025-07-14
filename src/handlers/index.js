@@ -11,9 +11,9 @@ function registerHandlers(bot) {
 
   // Manejar actualizaciones de ubicación
   bot.on('location', locationHandler(bot));
-  
+
   // Manejar mensajes editados con ubicación
-  bot.on('edited_message', (msg) => {
+  bot.on('edited_message', msg => {
     if (msg.location) {
       locationHandler(bot)(msg);
     }

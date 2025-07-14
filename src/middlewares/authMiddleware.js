@@ -13,7 +13,9 @@ const authMiddleware = {
    */
   isAdmin(userId) {
     const isAdminUser = config.ADMIN_IDS.includes(userId.toString());
-    logger.debug(`Verificación de admin para usuario ${userId}: ${isAdminUser}`);
+    logger.debug(
+      `Verificación de admin para usuario ${userId}: ${isAdminUser}`
+    );
     return isAdminUser;
   },
 
@@ -28,11 +30,13 @@ const authMiddleware = {
     const fromId = msg.from.id;
 
     if (!this.isAdmin(fromId)) {
-      logger.warn(`Usuario no autorizado ${fromId} intentó usar un comando restringido`);
+      logger.warn(
+        `Usuario no autorizado ${fromId} intentó usar un comando restringido`
+      );
       bot.sendMessage(chatId, '❌ No tienes permiso para usar este comando.');
       return false;
     }
-    
+
     return true;
   }
 };

@@ -6,8 +6,8 @@ const logger = require('../config/logger');
  * @param {Object} bot - Instancia del bot
  * @returns {Function} Manejador de comando
  */
-module.exports = (bot) => {
-  return (msg) => {
+module.exports = bot => {
+  return msg => {
     const chatId = msg.chat.id;
     logger.info(`Comando help solicitado por usuario ${msg.from.id}`);
 

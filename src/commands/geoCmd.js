@@ -11,8 +11,8 @@ const { isAdmin } = require('../middlewares/authMiddleware');
  * @param {Object} bot - Instancia del bot
  * @returns {Function} Manejador de comando
  */
-module.exports = (bot) => {
-  return async (msg) => {
+module.exports = bot => {
+  return async msg => {
     const chatId = msg.chat.id;
     const fromId = msg.from.id;
 
@@ -25,20 +25,27 @@ module.exports = (bot) => {
     }
 
     try {
-      bot.sendMessage(chatId, '🔄 Obteniendo información de ubicación de las unidades...');
+      bot.sendMessage(
+        chatId,
+        '🔄 Obteniendo información de ubicación de las unidades...'
+      );
 
       const reportData = {};
       const currentTime = Date.now();
       const groupChats = storage.getAllGroupChats();
       const userLocations = storage.getAllUserLocations();
 
-      logger.debug(`Datos para procesar: ${Object.keys(groupChats).length} grupos, ${Object.keys(userLocations).length} ubicaciones`);
+      logger.debug(
+        `Datos para procesar: ${Object.keys(groupChats).length} grupos, ${Object.keys(userLocations).length} ubicaciones`
+      );
 
       // Recorrer todos los grupos con sus ubicaciones
       for (const [groupId, groupName] of Object.entries(groupChats)) {
         const users = userLocations[groupId];
         if (!users || Object.keys(users).length === 0) {
-          logger.debug(`Grupo ${groupName} (${groupId}) sin ubicaciones registradas`);
+          logger.debug(
+            `Grupo ${groupName} (${groupId}) sin ubicaciones registradas`
+          );
           continue;
         }
 
@@ -49,12 +56,20 @@ module.exports = (bot) => {
         for (const [userId, loc] of Object.entries(users)) {
           try {
             // Obtener detalles de ubicación
-            logger.debug(`Obteniendo detalles para usuario ${userId} en ${loc.latitude},${loc.longitude}`);
-            const locationDetails = await hereService.getLocationDetails(loc.latitude, loc.longitude);
-            
+            logger.debug(
+              `Obteniendo detalles para usuario ${userId} en ${loc.latitude},${loc.longitude}`
+            );
+            const locationDetails = await hereService.getLocationDetails(
+              loc.latitude,
+              loc.longitude
+            );
+
             // Calcular tiempo desde última actualización
-            const lastUpdate = storage.getLocationLastUpdate(groupId, userId) || 0;
-            const timeSinceUpdate = Math.floor((currentTime - lastUpdate) / (60 * 1000)); // Convertir a minutos
+            const lastUpdate =
+              storage.getLocationLastUpdate(groupId, userId) || 0;
+            const timeSinceUpdate = Math.floor(
+              (currentTime - lastUpdate) / (60 * 1000)
+            ); // Convertir a minutos
 
             reportData[groupName].push({
               userName: storage.getUserName(userId),
@@ -62,10 +77,12 @@ module.exports = (bot) => {
               timeSinceUpdate
             });
 
-            logger.info(`Información de ubicación obtenida para usuario ${userId}`, {
-              location: locationDetails
-            });
-
+            logger.info(
+              `Información de ubicación obtenida para usuario ${userId}`,
+              {
+                location: locationDetails
+              }
+            );
           } catch (error) {
             logger.error(`Error procesando ubicación para usuario ${userId}`, {
               error: error.message
@@ -83,7 +100,10 @@ module.exports = (bot) => {
 
       if (Object.keys(reportData).length === 0) {
         logger.warn('No hay datos para generar el reporte geo');
-        bot.sendMessage(chatId, '❌ No hay usuarios con ubicaciones registradas.');
+        bot.sendMessage(
+          chatId,
+          '❌ No hay usuarios con ubicaciones registradas.'
+        );
         return;
       }
 
@@ -96,13 +116,22 @@ module.exports = (bot) => {
       });
 
       if (chatId.toString() !== config.ADMIN_GROUP_ID.toString()) {
-        bot.sendMessage(chatId, '✅ El reporte de ubicaciones ha sido enviado al Grupo Administrador.');
+        bot.sendMessage(
+          chatId,
+          '✅ El reporte de ubicaciones ha sido enviado al Grupo Administrador.'
+        );
       }
 
       logger.info('Reporte geo generado y enviado exitosamente');
     } catch (error) {
-      logger.error('Error general en comando geo:', { error: error.message, stack: error.stack });
-      bot.sendMessage(chatId, '❌ Error al generar el reporte de ubicaciones. Por favor, inténtalo más tarde.');
+      logger.error('Error general en comando geo:', {
+        error: error.message,
+        stack: error.stack
+      });
+      bot.sendMessage(
+        chatId,
+        '❌ Error al generar el reporte de ubicaciones. Por favor, inténtalo más tarde.'
+      );
     }
   };
 };

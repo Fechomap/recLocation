@@ -17,7 +17,9 @@ const adminCommands = {
       const chatId = msg.chat.id;
       const fromId = msg.from.id;
 
-      logger.info(`Intento de cambio de nombre de operador por usuario ${fromId}`);
+      logger.info(
+        `Intento de cambio de nombre de operador por usuario ${fromId}`
+      );
 
       if (!isAdmin(fromId)) {
         logger.warn(`Usuario no autorizado ${fromId} intentó usar /changeOP`);
@@ -28,7 +30,10 @@ const adminCommands = {
       const args = match[1].split(' ');
       if (args.length < 2) {
         logger.warn('Formato incorrecto en comando changeOP');
-        bot.sendMessage(chatId, '❌ Formato incorrecto. Usa: /changeOP <user_id> <new_name>');
+        bot.sendMessage(
+          chatId,
+          '❌ Formato incorrecto. Usa: /changeOP <user_id> <new_name>'
+        );
         return;
       }
 
@@ -42,8 +47,11 @@ const adminCommands = {
       }
 
       storage.setUserName(userId, newName);
-      logger.info(`Nombre de usuario actualizado`, { userId, newName });
-      bot.sendMessage(chatId, `✅ Nombre asignado al usuario ${userId}: ${newName}`);
+      logger.info('Nombre de usuario actualizado', { userId, newName });
+      bot.sendMessage(
+        chatId,
+        `✅ Nombre asignado al usuario ${userId}: ${newName}`
+      );
     };
   },
 
@@ -57,7 +65,9 @@ const adminCommands = {
       const chatId = msg.chat.id;
       const fromId = msg.from.id;
 
-      logger.info(`Intento de cambio múltiple de nombres de operadores por usuario ${fromId}`);
+      logger.info(
+        `Intento de cambio múltiple de nombres de operadores por usuario ${fromId}`
+      );
 
       if (!isAdmin(fromId)) {
         logger.warn(`Usuario no autorizado ${fromId} intentó usar /changeOPs`);
@@ -72,7 +82,9 @@ const adminCommands = {
         let responseMessage = '📝 *Resultado del registro múltiple:*\n\n';
 
         entries.forEach(entry => {
-          const [userId, ...nameParts] = entry.split(':').map(part => part.trim());
+          const [userId, ...nameParts] = entry
+            .split(':')
+            .map(part => part.trim());
           const newName = nameParts.join(':').trim(); // Une todas las partes del nombre en caso de que contenga ':'
 
           if (!userId || !newName) {
@@ -92,13 +104,13 @@ const adminCommands = {
           responseMessage += `✅ ID ${userId} registrado como: ${newName}\n`;
         });
 
-        responseMessage += `\n📊 *Resumen:*\n`;
+        responseMessage += '\n📊 *Resumen:*\n';
         responseMessage += `✅ Registros exitosos: ${successCount}\n`;
         if (failCount > 0) {
           responseMessage += `❌ Registros fallidos: ${failCount}\n`;
         }
 
-        logger.info(`Cambio múltiple completado`, {
+        logger.info('Cambio múltiple completado', {
           successCount,
           failCount
         });
@@ -106,7 +118,10 @@ const adminCommands = {
         bot.sendMessage(chatId, responseMessage, { parse_mode: 'Markdown' });
       } catch (error) {
         logger.error('Error en cambio múltiple de operadores:', error);
-        bot.sendMessage(chatId, '❌ Error en el procesamiento. Verifica el formato: /changeOPs id1:nombre1, id2:nombre2');
+        bot.sendMessage(
+          chatId,
+          '❌ Error en el procesamiento. Verifica el formato: /changeOPs id1:nombre1, id2:nombre2'
+        );
       }
     };
   }

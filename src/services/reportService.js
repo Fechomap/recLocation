@@ -1,6 +1,5 @@
 // src/services/reportService.js
 const storage = require('../storage');
-const logger = require('../config/logger');
 
 /**
  * Servicio para generación y formateo de reportes
@@ -13,15 +12,18 @@ const reportService = {
    */
   formatTimingReport(reportData) {
     // Crear un array plano con todos los usuarios y su información de grupo
-    let allUsers = [];
+    const allUsers = [];
     const currentTime = Date.now();
 
     for (const [groupName, users] of Object.entries(reportData)) {
       users.forEach(user => {
         if (!user.error) {
           // Calcular tiempo desde última actualización
-          const lastUpdate = storage.getLocationLastUpdate(user.groupId, user.userId) || 0;
-          const timeSinceUpdate = Math.floor((currentTime - lastUpdate) / (60 * 1000)); // Convertir a minutos
+          const lastUpdate =
+            storage.getLocationLastUpdate(user.groupId, user.userId) || 0;
+          const timeSinceUpdate = Math.floor(
+            (currentTime - lastUpdate) / (60 * 1000)
+          ); // Convertir a minutos
 
           allUsers.push({
             ...user,
@@ -36,16 +38,17 @@ const reportService = {
     allUsers.sort((a, b) => a.durationMin - b.durationMin);
 
     // Crear el mensaje del reporte
-    let reportMessage = `📍 *Reporte General de Timing*\n\n`;
+    let reportMessage = '📍 *Reporte General de Timing*\n\n';
 
     // Agregar usuarios ordenados
     allUsers.forEach((user, index) => {
       const safeUserName = this.escapeMarkdown(user.userName);
       const safeGroupName = this.escapeMarkdown(user.groupName);
 
-      let userReport = `${index + 1}. 🚚 *${safeGroupName}* - ${safeUserName}:\n` +
-                      `   - Dist: *${user.distanceKm}* km\n` +
-                      `   - ETA: *${user.durationMin}* minutos\n`;
+      let userReport =
+        `${index + 1}. 🚚 *${safeGroupName}* - ${safeUserName}:\n` +
+        `   - Dist: *${user.distanceKm}* km\n` +
+        `   - ETA: *${user.durationMin}* minutos\n`;
 
       // Agregar información de última actualización solo si han pasado más de 5 minutos
       if (user.timeSinceUpdate >= 5) {
@@ -56,7 +59,7 @@ const reportService = {
     });
 
     // Agregar usuarios con error al final
-    let errorUsers = [];
+    const errorUsers = [];
     for (const [groupName, users] of Object.entries(reportData)) {
       users.forEach(user => {
         if (user.error) {
@@ -69,7 +72,7 @@ const reportService = {
     }
 
     if (errorUsers.length > 0) {
-      reportMessage += `\n❌ *Usuarios con error*:\n`;
+      reportMessage += '\n❌ *Usuarios con error*:\n';
       errorUsers.forEach(user => {
         const safeUserName = this.escapeMarkdown(user.userName);
         const safeGroupName = this.escapeMarkdown(user.groupName);
@@ -86,18 +89,17 @@ const reportService = {
    * @returns {string} Mensaje de reporte formateado con Markdown
    */
   formatGeoReport(reportData) {
-    const currentTime = Date.now();
-    let reportMessage = `📍 *Reporte General de Geo*\n\n`;
+    let reportMessage = '📍 *Reporte General de Geo*\n\n';
     let index = 1;
 
     for (const [groupName, users] of Object.entries(reportData)) {
       users.forEach(user => {
         const safeUserName = this.escapeMarkdown(user.userName);
         const safeGroupName = this.escapeMarkdown(groupName);
-        
+
         let userReport = `${index}. 🚚 *${safeGroupName}* - ${safeUserName}:\n`;
         userReport += `   - Lugar: col. ${user.location.colonia}, Mun ${user.location.municipio}\n`;
-        
+
         // Agregar tiempo desde última actualización si es mayor a 5 minutos
         if (user.timeSinceUpdate >= 5) {
           userReport += `   - ultima act: ${user.timeSinceUpdate} min\n`;
@@ -119,7 +121,7 @@ const reportService = {
   escapeMarkdown(text) {
     if (!text) return '';
     // Escapa caracteres especiales de Markdown
-    return text.replace(/([*_`\[\]])/g, '\\$1');
+    return text.replace(/([*_`[\]])/g, '\\$1');
   }
 };
 
