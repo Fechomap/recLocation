@@ -1,6 +1,6 @@
 // tests/services.test.js
 const axios = require('axios');
-const hereService = require('../src/services/hereService');
+const mapboxService = require('../src/services/mapboxService');
 const reportService = require('../src/services/reportService');
 const storage = require('../src/storage');
 
@@ -12,7 +12,7 @@ const mockedAxios = axios;
 jest.mock('../src/storage');
 const mockedStorage = storage;
 
-describe('HERE Service', () => {
+describe('Mapbox Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -38,7 +38,7 @@ describe('HERE Service', () => {
 
       mockedAxios.get.mockResolvedValue(mockResponse);
 
-      const result = await hereService.calculateRoute(
+      const result = await mapboxService.calculateRoute(
         '19.4326,-99.1332',
         '19.4284,-99.1276'
       );
@@ -49,14 +49,12 @@ describe('HERE Service', () => {
       });
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
-        'https://router.hereapi.com/v8/routes',
+        'https://api.mapbox.com/directions/v5/mapbox/driving/-99.1332,19.4326;-99.1276,19.4284',
         {
           params: {
-            transportMode: 'car',
-            origin: '19.4326,-99.1332',
-            destination: '19.4284,-99.1276',
-            return: 'summary',
-            apiKey: expect.any(String)
+            geometries: 'geojson',
+            overview: 'simplified',
+            access_token: expect.any(String)
           }
         }
       );
@@ -72,7 +70,7 @@ describe('HERE Service', () => {
       mockedAxios.get.mockResolvedValue(mockResponse);
 
       await expect(
-        hereService.calculateRoute('19.4326,-99.1332', '19.4284,-99.1276')
+        mapboxService.calculateRoute('19.4326,-99.1332', '19.4284,-99.1276')
       ).rejects.toThrow('No se encontró ninguna ruta');
     });
 
@@ -81,7 +79,7 @@ describe('HERE Service', () => {
       mockedAxios.get.mockRejectedValue(mockError);
 
       await expect(
-        hereService.calculateRoute('19.4326,-99.1332', '19.4284,-99.1276')
+        mapboxService.calculateRoute('19.4326,-99.1332', '19.4284,-99.1276')
       ).rejects.toThrow('API Error');
     });
   });
@@ -103,7 +101,7 @@ describe('HERE Service', () => {
 
       mockedAxios.get.mockResolvedValue(mockResponse);
 
-      const result = await hereService.getLocationDetails(19.4326, -99.1332);
+      const result = await mapboxService.getLocationDetails(19.4326, -99.1332);
 
       expect(result).toEqual({
         colonia: 'ROMA NORTE',
@@ -120,7 +118,7 @@ describe('HERE Service', () => {
 
       mockedAxios.get.mockResolvedValue(mockResponse);
 
-      const result = await hereService.getLocationDetails(19.4326, -99.1332);
+      const result = await mapboxService.getLocationDetails(19.4326, -99.1332);
 
       expect(result).toEqual({
         colonia: 'NO DISPONIBLE',
@@ -144,7 +142,7 @@ describe('HERE Service', () => {
 
       mockedAxios.get.mockResolvedValue(mockResponse);
 
-      const result = await hereService.getLocationDetails(19.4326, -99.1332);
+      const result = await mapboxService.getLocationDetails(19.4326, -99.1332);
 
       expect(result).toEqual({
         colonia: 'CENTRO',
@@ -157,7 +155,7 @@ describe('HERE Service', () => {
       mockedAxios.get.mockRejectedValue(mockError);
 
       await expect(
-        hereService.getLocationDetails(19.4326, -99.1332)
+        mapboxService.getLocationDetails(19.4326, -99.1332)
       ).rejects.toThrow('Geocoding API Error');
     });
   });
@@ -225,7 +223,9 @@ describe('Report Service', () => {
       const result = reportService.formatTimingReport(reportData);
 
       expect(result).toContain('❌ *Usuarios con error*:');
-      expect(result).toContain('- Grupo A - Juan Pérez: Error al calcular la ruta');
+      expect(result).toContain(
+        '- Grupo A - Juan Pérez: Error al calcular la ruta'
+      );
     });
 
     test('should show last update time when > 5 minutes', () => {
@@ -290,7 +290,9 @@ describe('Report Service', () => {
       const input = 'Text with *bold* and _italic_ and [link]';
       const result = reportService.escapeMarkdown(input);
 
-      expect(result).toBe('Text with \\*bold\\* and \\_italic\\_ and \\[link\\]');
+      expect(result).toBe(
+        'Text with \\*bold\\* and \\_italic\\_ and \\[link\\]'
+      );
     });
 
     test('should handle empty or null text', () => {

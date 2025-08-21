@@ -1,6 +1,6 @@
 // src/api/index.js
 const express = require('express');
-const hereService = require('../services/hereService');
+const mapboxRouteService = require('../services/mapboxRouteService');
 const reportService = require('../services/reportService');
 const storage = require('../storage');
 const logger = require('../config/logger');
@@ -116,7 +116,7 @@ function startApiServer(bot) {
               `Calculando ruta para usuario ${userId} desde ${loc.latitude},${loc.longitude} hasta ${destLatitude},${destLongitude}`
             );
 
-            const route = await hereService.calculateRoute(
+            const route = await mapboxRouteService.calculateRoute(
               `${loc.latitude},${loc.longitude}`,
               `${destLatitude},${destLongitude}`
             );

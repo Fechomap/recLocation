@@ -107,7 +107,10 @@ describe('Admin Commands', () => {
 
       changeOpHandler(mockMessage, match);
 
-      expect(mockedStorage.setUserName).toHaveBeenCalledWith('987654321', 'Juan Pérez');
+      expect(mockedStorage.setUserName).toHaveBeenCalledWith(
+        '987654321',
+        'Juan Pérez'
+      );
       expect(mockBot.sendMessage).toHaveBeenCalledWith(
         123456789,
         '✅ Nombre asignado al usuario 987654321: Juan Pérez'
@@ -219,7 +222,10 @@ describe('Admin Commands', () => {
 
       changeOpHandler(mockMessage, match);
 
-      expect(mockedStorage.setUserName).toHaveBeenCalledWith('1234567890', 'Test User');
+      expect(mockedStorage.setUserName).toHaveBeenCalledWith(
+        '1234567890',
+        'Test User'
+      );
     });
 
     test('should handle very long user IDs', () => {
@@ -289,7 +295,9 @@ describe('Admin Commands', () => {
       };
       const match = ['/changeOP 987654321 Juan Pérez', '987654321 Juan Pérez'];
 
-      expect(() => changeOpHandler(mockMessage, match)).toThrow('Storage error');
+      expect(() => changeOpHandler(mockMessage, match)).toThrow(
+        'Storage error'
+      );
     });
 
     test('should handle bot sendMessage errors gracefully', () => {

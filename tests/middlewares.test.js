@@ -9,7 +9,7 @@ const mockedConfig = config;
 describe('Auth Middleware', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Default mock setup
     mockedConfig.ADMIN_IDS = ['123456789', '987654321', '555666777'];
   });
@@ -44,42 +44,42 @@ describe('Auth Middleware', () => {
 
     test('should handle empty admin list', () => {
       mockedConfig.ADMIN_IDS = [];
-      
+
       const result = authMiddleware.isAdmin('123456789');
       expect(result).toBe(false);
     });
 
     test('should handle large user IDs', () => {
       mockedConfig.ADMIN_IDS = ['12345678901234567890'];
-      
+
       const result = authMiddleware.isAdmin('12345678901234567890');
       expect(result).toBe(true);
     });
 
     test('should handle negative user IDs', () => {
       mockedConfig.ADMIN_IDS = ['-100123456789'];
-      
+
       expect(authMiddleware.isAdmin('-100123456789')).toBe(true);
       expect(authMiddleware.isAdmin(-100123456789)).toBe(true);
     });
 
     test('should be case sensitive for string comparison', () => {
       mockedConfig.ADMIN_IDS = ['123456789'];
-      
+
       expect(authMiddleware.isAdmin('123456789')).toBe(true);
       expect(authMiddleware.isAdmin('123456789 ')).toBe(false); // with space
     });
 
     test('should handle zero as user ID', () => {
       mockedConfig.ADMIN_IDS = ['0'];
-      
+
       expect(authMiddleware.isAdmin(0)).toBe(true);
       expect(authMiddleware.isAdmin('0')).toBe(true);
     });
 
     test('should convert number to string for comparison', () => {
       mockedConfig.ADMIN_IDS = ['123456789'];
-      
+
       // Should work regardless of input type
       expect(authMiddleware.isAdmin(123456789)).toBe(true);
       expect(authMiddleware.isAdmin('123456789')).toBe(true);
@@ -164,7 +164,7 @@ describe('Auth Middleware', () => {
     test('should handle missing from.id gracefully', () => {
       const mockMessage = {
         chat: { id: 123456789 },
-        from: { } // missing id
+        from: {} // missing id
       };
 
       const result = authMiddleware.adminOnly(mockBot, mockMessage);
@@ -188,13 +188,15 @@ describe('Auth Middleware', () => {
       };
 
       expect(authMiddleware.adminOnly(mockBot, mockMessageNull)).toBe(false);
-      expect(authMiddleware.adminOnly(mockBot, mockMessageUndefined)).toBe(false);
+      expect(authMiddleware.adminOnly(mockBot, mockMessageUndefined)).toBe(
+        false
+      );
       expect(mockBot.sendMessage).toHaveBeenCalledTimes(2);
     });
 
     test('should use isAdmin method internally', () => {
       const isAdminSpy = jest.spyOn(authMiddleware, 'isAdmin');
-      
+
       const mockMessage = {
         chat: { id: 123456789 },
         from: { id: 123456789 }
@@ -203,7 +205,7 @@ describe('Auth Middleware', () => {
       authMiddleware.adminOnly(mockBot, mockMessage);
 
       expect(isAdminSpy).toHaveBeenCalledWith(123456789);
-      
+
       isAdminSpy.mockRestore();
     });
   });
@@ -256,9 +258,9 @@ describe('Auth Middleware', () => {
     test('should handle real-world admin ID patterns', () => {
       // Telegram user IDs are typically 9-10 digits
       mockedConfig.ADMIN_IDS = [
-        '123456789',    // 9 digits
-        '1234567890',   // 10 digits
-        '98765432',     // 8 digits
+        '123456789', // 9 digits
+        '1234567890', // 10 digits
+        '98765432', // 8 digits
         '-100123456789' // Group ID (negative)
       ];
 
@@ -283,7 +285,9 @@ describe('Auth Middleware', () => {
         from: { id: 999888777 }
       };
 
-      expect(() => authMiddleware.adminOnly(mockBot, mockMessage)).toThrow('Bot error');
+      expect(() => authMiddleware.adminOnly(mockBot, mockMessage)).toThrow(
+        'Bot error'
+      );
     });
 
     test('should handle malformed config.ADMIN_IDS', () => {

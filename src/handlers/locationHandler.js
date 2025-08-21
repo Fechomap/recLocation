@@ -7,7 +7,7 @@ const logger = require('../config/logger');
  * @param {Object} bot - Instancia del bot
  * @returns {Function} Manejador de evento
  */
-module.exports = bot => {
+module.exports = () => {
   return msg => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;

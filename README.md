@@ -154,6 +154,7 @@ NODE_ENV=production
    - O simplemente iniciar localmente (el webhook será eliminado automáticamente)
 
 2. **Iniciar localmente**:
+
    ```bash
    npm run dev
    ```

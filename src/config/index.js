@@ -6,6 +6,7 @@
 const config = {
   // Configuración del bot
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+  MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN,
   HERE_API_KEY: process.env.HERE_API_KEY,
   ADMIN_GROUP_ID: process.env.ADMIN_GROUP_ID,
   ADMIN_IDS: process.env.ADMIN_IDS
@@ -27,9 +28,10 @@ const config = {
    * Valida la configuración requerida
    * Lanza error si faltan variables críticas
    */
-  validateConfig: function() {
+  validateConfig() {
     const requiredVars = [
       'TELEGRAM_BOT_TOKEN',
+      'MAPBOX_ACCESS_TOKEN',
       'HERE_API_KEY',
       'ADMIN_GROUP_ID',
       'ADMIN_IDS'

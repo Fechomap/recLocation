@@ -98,7 +98,7 @@ const reportService = {
         const safeGroupName = this.escapeMarkdown(groupName);
 
         let userReport = `${index}. 🚚 *${safeGroupName}* - ${safeUserName}:\n`;
-        userReport += `   - Lugar: col. ${user.location.colonia}, Mun ${user.location.municipio}\n`;
+        userReport += `   - Lugar: ${user.location.colonia}, Mun ${user.location.municipio}\n`;
 
         // Agregar tiempo desde última actualización si es mayor a 5 minutos
         if (user.timeSinceUpdate >= 5) {

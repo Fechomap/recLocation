@@ -241,8 +241,8 @@ describe('Location Handler', () => {
           id: 123456789
         },
         location: {
-          latitude: 19.432608123456789,
-          longitude: -99.133247987654321
+          latitude: 19.432608,
+          longitude: -99.133248
         }
       };
 
@@ -251,9 +251,9 @@ describe('Location Handler', () => {
       expect(mockedStorage.setUserLocation).toHaveBeenCalledWith(
         123456789,
         123456789,
-        { 
-          latitude: 19.432608123456789, 
-          longitude: -99.133247987654321 
+        {
+          latitude: 19.432608,
+          longitude: -99.133248
         }
       );
     });
@@ -291,7 +291,7 @@ describe('Location Handler', () => {
       const users = [
         { id: 111111111, lat: 19.4326, lng: -99.1332 },
         { id: 222222222, lat: 19.4284, lng: -99.1276 },
-        { id: 333333333, lat: 19.4200, lng: -99.1300 }
+        { id: 333333333, lat: 19.42, lng: -99.13 }
       ];
 
       users.forEach(user => {

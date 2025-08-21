@@ -2,7 +2,7 @@
 const logger = require('../config/logger');
 const config = require('../config');
 const storage = require('../storage');
-const hereService = require('../services/hereService');
+const mapboxRouteService = require('../services/mapboxRouteService');
 const reportService = require('../services/reportService');
 const { isAdmin } = require('../middlewares/authMiddleware');
 
@@ -179,7 +179,7 @@ module.exports = bot => {
             logger.debug(
               `Calculando ruta para usuario ${userId} desde ${loc.latitude},${loc.longitude} hasta ${destLatitude},${destLongitude}`
             );
-            const route = await hereService.calculateRoute(
+            const route = await mapboxRouteService.calculateRoute(
               `${loc.latitude},${loc.longitude}`,
               `${destLatitude},${destLongitude}`
             );

@@ -1,6 +1,4 @@
 // tests/storage.test.js
-const Storage = require('../src/storage/index');
-
 describe('Storage Service', () => {
   let storage;
 
@@ -101,8 +99,8 @@ describe('Storage Service', () => {
 
       expect(allLocations).toEqual({
         [chatId]: {
-          '123456789': location1,
-          '987654321': location2
+          123456789: location1,
+          987654321: location2
         }
       });
     });
@@ -121,11 +119,10 @@ describe('Storage Service', () => {
     });
 
     test('should allow method chaining for setUserLocation', () => {
-      const result = storage.setUserLocation(
-        '-100123456789',
-        '123456789',
-        { latitude: 19.4326, longitude: -99.1332 }
-      );
+      const result = storage.setUserLocation('-100123456789', '123456789', {
+        latitude: 19.4326,
+        longitude: -99.1332
+      });
       expect(result).toBe(storage);
     });
   });
@@ -155,8 +152,8 @@ describe('Storage Service', () => {
       const allNames = storage.getAllUserNames();
 
       expect(allNames).toEqual({
-        '123456789': 'Juan Pérez',
-        '987654321': 'María García'
+        123456789: 'Juan Pérez',
+        987654321: 'María García'
       });
     });
 
@@ -191,7 +188,10 @@ describe('Storage Service', () => {
     });
 
     test('should return 0 for non-existent location update', () => {
-      const result = storage.getLocationLastUpdate('-100999999999', '999999999');
+      const result = storage.getLocationLastUpdate(
+        '-100999999999',
+        '999999999'
+      );
       expect(result).toBe(0);
     });
 
@@ -235,16 +235,17 @@ describe('Storage Service', () => {
       // Add some data
       storage.setGroupChat('-100123456789', 'Test Group');
       storage.setUserName('123456789', 'Juan Pérez');
-      storage.setUserLocation(
-        '-100123456789',
-        '123456789',
-        { latitude: 19.4326, longitude: -99.1332 }
-      );
+      storage.setUserLocation('-100123456789', '123456789', {
+        latitude: 19.4326,
+        longitude: -99.1332
+      });
 
       // Verify data exists
       expect(storage.getGroupChat('-100123456789')).toBe('Test Group');
       expect(storage.getUserName('123456789')).toBe('Juan Pérez');
-      expect(storage.getUserLocation('-100123456789', '123456789')).toBeDefined();
+      expect(
+        storage.getUserLocation('-100123456789', '123456789')
+      ).toBeDefined();
 
       // Reset
       storage.reset();
@@ -252,8 +253,12 @@ describe('Storage Service', () => {
       // Verify data is cleared
       expect(storage.getGroupChat('-100123456789')).toBeUndefined();
       expect(storage.getUserName('123456789')).toBe('Usuario 123456789');
-      expect(storage.getUserLocation('-100123456789', '123456789')).toBeUndefined();
-      expect(storage.getLocationLastUpdate('-100123456789', '123456789')).toBe(0);
+      expect(
+        storage.getUserLocation('-100123456789', '123456789')
+      ).toBeUndefined();
+      expect(storage.getLocationLastUpdate('-100123456789', '123456789')).toBe(
+        0
+      );
     });
 
     test('should reset to empty objects', () => {
