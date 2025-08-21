@@ -1,5 +1,0 @@
-[phases.install]
-cmds = ["npm ci --legacy-peer-deps"]
-
-[phases.start]
-cmd = "npm start"
